@@ -298,6 +298,7 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.obstacles.reset();
       this.events.reset();
       this.background.reset();
+      this.audio.startBGM();
 
       // UI Overlays
       this.ui.startScreen.classList.add('hidden');
@@ -319,6 +320,7 @@ window.DesiRoadster = window.DesiRoadster || {};
     togglePause() {
       if (this.state === STATE.PLAYING) {
         this.audio.playClick();
+        this.audio.pauseBGM();
         this.state = STATE.PAUSED;
         this.ui.pauseScreen.classList.remove('hidden');
         if (this.ui.touchControls) {
@@ -326,6 +328,7 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       } else if (this.state === STATE.PAUSED) {
         this.audio.playClick();
+        this.audio.resumeBGM();
         this.state = STATE.PLAYING;
         this.lastTime = performance.now();
         this.ui.pauseScreen.classList.add('hidden');
@@ -341,6 +344,7 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.currentSpeed = 0;
       this.player.vx = 0;
       this.audio.playGameOver();
+      this.audio.stopBGM();
 
       const totalScore = Math.floor(this.distance) + this.coinScore + this.nearMissScore;
       let isNewRecord = false;
@@ -416,6 +420,9 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
 
       if (this.state !== STATE.PLAYING) return;
+ 
+      // Update Audio (Background Music & Ambient Highway Horns In-Between)
+      this.audio.update(dt, true);
 
       // 4. Pressure Horn
       if (this.hornCooldownTimer > 0) {
