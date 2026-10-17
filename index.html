@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Desi Roadster - 2D Indian Arcade Game</title>
+  <meta name="description" content="Desi Roadster - A 2D side-scrolling arcade game set on chaotic Indian roads featuring a futuristic transformable electric car.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- In-Game HUD -->
+    <div id="hud" class="hud hidden">
+      <div class="hud-left">
+        <div class="hud-card">
+          <span class="hud-label">SCORE</span>
+          <span id="score-display" class="hud-value highlight-cyan">00000</span>
+        </div>
+        <div class="hud-card">
+          <span class="hud-label">DISTANCE</span>
+          <span id="distance-display" class="hud-value">0000 m</span>
+        </div>
+        <div class="hud-card">
+          <span class="hud-label">SPEED</span>
+          <span id="speed-display" class="hud-value">0 km/h</span>
+        </div>
+      </div>
+
+      <div class="hud-center">
+        <div id="mode-badge" class="mode-badge road-mode">
+          <span class="mode-icon">🚗</span>
+          <span id="mode-text">ROAD MODE</span>
+        </div>
+        <div id="lives-display" class="lives-container" title="Chassis Integrity">
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+          <span class="heart">❤️</span>
+        </div>
+      </div>
+
+      <div class="hud-right">
+        <div class="hud-card battery-card">
+          <div class="battery-header">
+            <span class="hud-label">EV BATTERY</span>
+            <span id="battery-pct" class="hud-subvalue">100%</span>
+          </div>
+          <div class="battery-bar-container">
+            <div id="battery-bar" class="battery-bar-fill"></div>
+          </div>
+        </div>
+        <button id="mute-btn" class="hud-card hud-btn" title="Toggle Sound (M)">🔊</button>
+      </div>
+    </div>
+
+    <!-- Start Screen Overlay -->
+    <div id="start-screen" class="overlay">
+      <div class="arcade-panel">
+        <div class="title-badge">ELECTRIFYING DESI HIGHWAYS</div>
+        <h1 class="game-title">
+          <span class="highlight-saffron">DESI</span>
+          <span class="highlight-cyan">ROADSTER</span>
+        </h1>
+        <p class="tagline">Cruise the chaotic Indian Grand Trunk Highway & soar past the traffic!</p>
+
+        <div class="instructions-box">
+          <h3>🕹️ PILOT CONTROLS</h3>
+          <div class="control-grid">
+            <div class="control-item">
+              <span class="key-badge">W / ↑</span>
+              <span class="key-desc">Drive Up / Flight Climb</span>
+            </div>
+            <div class="control-item">
+              <span class="key-badge">S / ↓</span>
+              <span class="key-desc">Drive Down / Flight Dive</span>
+            </div>
+            <div class="control-item">
+              <span class="key-badge">A / D</span>
+              <span class="key-desc">Brake / Nitro Boost</span>
+            </div>
+            <div class="control-item">
+              <span class="key-badge">SPACE</span>
+              <span class="key-desc">Jump (Road Mode)</span>
+            </div>
+            <div class="control-item">
+              <span class="key-badge">M</span>
+              <span class="key-desc">Mute / Unmute Audio</span>
+            </div>
+            <div class="control-item">
+              <span class="key-badge">P / ESC</span>
+              <span class="key-desc">Pause Game</span>
+            </div>
+            <div class="control-item full-width highlight-row">
+              <span class="key-badge key-special">F / SHIFT</span>
+              <span class="key-desc"><strong>SWITCH MODE:</strong> Road Drive ⇄ Flight Hover</span>
+            </div>
+          </div>
+        </div>
+
+        <button id="start-btn" class="arcade-btn pulse-glow">
+          START ENGINE (PRESS SPACE)
+        </button>
+        <p class="sub-hint">Tip: Collect ₹ Rupee coins and pull off close near-misses for massive points!</p>
+      </div>
+    </div>
+
+    <!-- Pause Screen Overlay -->
+    <div id="pause-screen" class="overlay hidden">
+      <div class="arcade-panel small-panel">
+        <h2>GAME PAUSED</h2>
+        <p>Take a kadak chai break ☕</p>
+        <button id="resume-btn" class="arcade-btn">RESUME (P / ESC)</button>
+      </div>
+    </div>
+
+    <!-- Game Over Screen Overlay -->
+    <div id="gameover-screen" class="overlay hidden">
+      <div class="arcade-panel gameover-panel">
+        <div class="title-badge danger-badge">CHASSIS DESTROYED</div>
+        <h2 class="gameover-title">GAME OVER</h2>
+
+        <div class="stats-summary">
+          <div class="stat-row">
+            <span>FINAL SCORE</span>
+            <span id="final-score" class="stat-highlight">0</span>
+          </div>
+          <div class="stat-row">
+            <span>DISTANCE COVERED</span>
+            <span id="final-distance">0 m</span>
+          </div>
+          <div class="stat-row">
+            <span>COINS COLLECTED</span>
+            <span id="final-coins">0 ₹</span>
+          </div>
+          <div class="stat-row">
+            <span>NEAR-MISS BONUSES</span>
+            <span id="final-nearmisses">0</span>
+          </div>
+          <div class="stat-row highscore-row">
+            <span>🏆 ALL-TIME RECORD</span>
+            <span id="final-highscore">0</span>
+          </div>
+        </div>
+
+        <button id="restart-btn" class="arcade-btn pulse-glow">
+          PLAY AGAIN (PRESS SPACE / ENTER)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/input.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/background.js"></script>
+  <script src="js/player.js"></script>
+  <script src="js/obstacles.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
