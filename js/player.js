@@ -50,6 +50,25 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.shockwaves = []; // Expanding transformation energy rings
       this.lightningArcs = []; // Electric arcs during transformation
 
+      // Bounded Cinematic Thruster Smoke Pool (Zero-allocation pool for flight exhaust)
+      this.smokePool = [];
+      for (let i = 0; i < 48; i++) {
+        this.smokePool.push({
+          active: false,
+          x: 0,
+          y: 0,
+          vx: 0,
+          vy: 0,
+          radius: 4,
+          maxRadius: 28,
+          life: 0,
+          maxLife: 0.5,
+          baseAlpha: 0.55
+        });
+      }
+      this.smokeSpawnTimer = 0;
+      this.underWheelSmokeTimer = 0;
+
       // Horizontal bounds
       this.minX = 60;
       this.maxX = 380;
@@ -359,25 +378,71 @@ window.DesiRoadster = window.DesiRoadster || {};
     }
 
     _updateParticlesAndFX(dt, currentSpeed) {
-      const isFlying = this.state === PLAYER_STATE.FLIGHT || this.transformProgress > 0.15;
+      const isFlying = this.state === PLAYER_STATE.FLIGHT || this.transformProgress > 0.08;
 
-      // 1. Dual Ion Thruster Exhaust Trails (Flight & Takeoff)
+      // 1. Cinematic Thruster Smoke & Vapor (Flight & Takeoff/Landing)
       if (isFlying) {
-        const p = this.transformProgress;
-        // Upper & Lower Thruster Nozzles
-        const nozzleOffsets = [this.height * 0.42, this.height * 0.68];
-        nozzleOffsets.forEach(ny => {
-          this.particles.push({
-            x: this.x + 2,
-            y: this.y + ny + (Math.random() - 0.5) * 4,
-            vx: -(currentSpeed * 0.9 + 220 + Math.random() * 80),
-            vy: (Math.random() - 0.5) * 20,
-            size: (3 + Math.random() * 3.5) * p,
-            color: Math.random() > 0.35 ? Config.COLORS.CYAN : '#FFFFFF',
-            life: 0.22,
-            maxLife: 0.22
-          });
-        });
+        this.smokeSpawnTimer += dt;
+        // High spawn frequency creates continuous volumetric plume
+        const spawnInterval = 0.022;
+        if (this.smokeSpawnTimer >= spawnInterval) {
+          this.smokeSpawnTimer = 0;
+
+          // Dual rear nozzles: upper (0.58) and lower (0.72)
+          const nozzleY = (Math.random() > 0.5 ? this.height * 0.58 : this.height * 0.72);
+          const spawnX = this.x;
+          const spawnY = this.y + nozzleY + (Math.random() - 0.5) * 3;
+
+          // Find inactive slot in pre-allocated bounded pool
+          for (let i = 0; i < this.smokePool.length; i++) {
+            const smk = this.smokePool[i];
+            if (!smk.active) {
+              smk.active = true;
+              smk.x = spawnX;
+              smk.y = spawnY;
+              // Eject rapidly backwards relative to vehicle motion with subtle turbulence
+              smk.vx = -(currentSpeed * 0.88 + 190 + Math.random() * 90);
+              smk.vy = (Math.random() - 0.5) * 20 + (this.vy * 0.18);
+              smk.radius = 4.5 + Math.random() * 2.5;
+              smk.maxRadius = 24 + Math.random() * 12;
+              smk.life = 0.48 + Math.random() * 0.18;
+              smk.maxLife = smk.life;
+              smk.baseAlpha = 0.54 + Math.random() * 0.16;
+              break;
+            }
+          }
+        }
+
+        // Under-wheel downward thruster smoke puffs
+        this.underWheelSmokeTimer += dt;
+        const wheelSmokeInterval = 0.034;
+        if (this.underWheelSmokeTimer >= wheelSmokeInterval) {
+          this.underWheelSmokeTimer = 0;
+
+          // Alternate between rear wheel (24) and front wheel (80)
+          const isRear = Math.random() > 0.5;
+          const wheelXOffset = isRear ? 24 : 80;
+          const spawnX = this.x + wheelXOffset + (Math.random() - 0.5) * 4;
+          const spawnY = this.y + this.height * 0.78 + 4 + Math.random() * 3;
+
+          for (let i = 0; i < this.smokePool.length; i++) {
+            const smk = this.smokePool[i];
+            if (!smk.active) {
+              smk.active = true;
+              smk.x = spawnX;
+              smk.y = spawnY;
+              // Eject downwards and drift back with road wind
+              smk.vx = -(currentSpeed * 0.75 + 110 + Math.random() * 50);
+              smk.vy = 45 + Math.random() * 35 + (this.vy * 0.18);
+              smk.radius = 3.5 + Math.random() * 2.0;
+              smk.maxRadius = 18 + Math.random() * 8;
+              smk.life = 0.38 + Math.random() * 0.14;
+              smk.maxLife = smk.life;
+              smk.baseAlpha = 0.42 + Math.random() * 0.14;
+              break;
+            }
+          }
+        }
 
         // Wingtip Condensation Vortices
         if (this.transformProgress > 0.8) {
@@ -410,7 +475,22 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       }
 
-      // 2. Update Particles
+      // 2. Update Bounded Smoke Particles
+      for (let i = 0; i < this.smokePool.length; i++) {
+        const smk = this.smokePool[i];
+        if (!smk.active) continue;
+        smk.life -= dt;
+        if (smk.life <= 0) {
+          smk.active = false;
+        } else {
+          smk.x += smk.vx * dt;
+          smk.y += smk.vy * dt;
+          smk.vx *= 0.985; // Atmospheric deceleration
+          smk.vy += Math.sin(smk.life * 9) * 1.6;
+        }
+      }
+
+      // 3. Update General Particles (dust & sparks)
       for (let i = this.particles.length - 1; i >= 0; i--) {
         const pt = this.particles[i];
         pt.life -= dt;
@@ -422,7 +502,7 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       }
 
-      // 3. Update Shockwave Rings
+      // 4. Update Shockwave Rings
       for (let i = this.shockwaves.length - 1; i >= 0; i--) {
         const sw = this.shockwaves[i];
         sw.life -= dt;
@@ -434,7 +514,7 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       }
 
-      // 4. Update Lightning Arcs
+      // 5. Update Lightning Arcs
       for (let i = this.lightningArcs.length - 1; i >= 0; i--) {
         const arc = this.lightningArcs[i];
         arc.life -= dt;
@@ -457,6 +537,9 @@ window.DesiRoadster = window.DesiRoadster || {};
       // 3. Trailing particles behind vehicle
       this._renderParticles(ctx);
 
+      // 4. Cinematic Volumetric Exhaust Smoke (Drawn behind vehicle in world space)
+      this._renderThrusterSmoke(ctx);
+
       ctx.save();
 
       // Post-hit invulnerability flashing
@@ -476,26 +559,27 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
       ctx.rotate(tilt);
 
-      // 4. Forward Headlight Beam
+      // 5. Forward Headlight Beam
       this._renderHeadlightBeam(ctx);
 
-      // 5. Dual Ion Jet Flames (Flight Mode)
-      if (this.transformProgress > 0.1) {
+      // 6. Dual Supersonic Plasma Thruster Flames (Flight Mode)
+      if (this.transformProgress > 0.05) {
         this._renderIonThrusterFlames(ctx);
+        this._renderUnderWheelThrusterFlames(ctx);
       }
 
-      // 6. Retractable Aero Wings (Extends outwards)
+      // 7. Retractable Aero Wings (Extends outwards)
       if (this.transformProgress > 0.01) {
         this._renderFlightWings(ctx);
       }
 
-      // 7. Aerodynamic Cyber Chassis Body
+      // 8. Sleek Tesla Roadster-Inspired Aerodynamic Sports Car Chassis
       this._renderChassis(ctx);
 
-      // 8. Wheels / Hover Repulsor Pods
+      // 9. Sport Turbine Wheels / Hover Repulsor Pods
       this._renderWheels(ctx);
 
-      // 9. Electric Lightning Arcs (during transformation)
+      // 10. Electric Lightning Arcs (during transformation)
       if (this.lightningArcs.length > 0) {
         this._renderLightningArcs(ctx);
       }
@@ -535,53 +619,228 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.restore();
     }
 
-    _renderIonThrusterFlames(ctx) {
-      const p = this.transformProgress;
-      const flameLength = (24 + Math.random() * 12) * p;
+    /**
+     * Renders multi-layered volumetric exhaust smoke trailing behind the car during flight.
+     * Uses pre-allocated bounded smokePool with smooth expanding radial gradients.
+     */
+    _renderThrusterSmoke(ctx) {
+      if (this.transformProgress <= 0.05) return;
 
       ctx.save();
-      const nozzleOffsets = [this.height * 0.42, this.height * 0.68];
+      for (let i = 0; i < this.smokePool.length; i++) {
+        const smk = this.smokePool[i];
+        if (!smk.active) continue;
 
-      nozzleOffsets.forEach(ny => {
-        // Outer Cyan Plasma Flame
-        const grad = ctx.createLinearGradient(0, ny, -flameLength, ny);
-        grad.addColorStop(0, 'rgba(0, 243, 255, 0.9)');
-        grad.addColorStop(0.6, 'rgba(0, 150, 255, 0.5)');
-        grad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+        const progress = 1 - (smk.life / smk.maxLife); // 0 (birth) to 1 (fade)
+        const curRadius = smk.radius + (smk.maxRadius - smk.radius) * Math.pow(progress, 0.65);
+        // Smooth sine envelope: rapid initial billow, gentle lingering dissipation
+        const envelope = Math.sin(progress * Math.PI);
+        const alpha = envelope * (smk.baseAlpha || 0.55) * this.transformProgress;
+
+        if (alpha <= 0.01) continue;
+
+        const grad = ctx.createRadialGradient(smk.x, smk.y, 0, smk.x, smk.y, curRadius);
+        // White-hot / bright cyan core fading into soft atmospheric smoke
+        grad.addColorStop(0, `rgba(240, 249, 255, ${Math.min(1, alpha * 0.95).toFixed(3)})`);
+        grad.addColorStop(0.3, `rgba(186, 230, 253, ${(alpha * 0.65).toFixed(3)})`);
+        grad.addColorStop(0.7, `rgba(147, 197, 253, ${(alpha * 0.28).toFixed(3)})`);
+        grad.addColorStop(1, 'rgba(96, 165, 250, 0)');
 
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.moveTo(0, ny - 4 * p);
-        ctx.lineTo(-flameLength, ny);
-        ctx.lineTo(0, ny + 4 * p);
+        ctx.arc(smk.x, smk.y, curRadius, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    /**
+     * Renders supersonic white-hot rocket/plasma thruster flames at dual rear nozzles
+     */
+    _renderIonThrusterFlames(ctx) {
+      const p = this.transformProgress;
+      if (p <= 0.04) return;
+
+      const nozzleOffsets = [this.height * 0.58, this.height * 0.72];
+      const baseLen = 28 * p;
+      const flicker = Math.sin(this.hoverTimer * 18) * 4 + (Math.random() - 0.5) * 6;
+      const flameLength = Math.max(12, baseLen + flicker);
+
+      ctx.save();
+
+      nozzleOffsets.forEach(ny => {
+        // 1. Outer Translucent Blue/Cyan Plasma Envelope
+        const outerGrad = ctx.createLinearGradient(0, ny, -flameLength * 1.25, ny);
+        outerGrad.addColorStop(0, 'rgba(0, 243, 255, 0.75)');
+        outerGrad.addColorStop(0.35, 'rgba(56, 189, 248, 0.45)');
+        outerGrad.addColorStop(0.75, 'rgba(37, 99, 235, 0.2)');
+        outerGrad.addColorStop(1, 'rgba(30, 64, 175, 0)');
+
+        ctx.fillStyle = outerGrad;
+        ctx.beginPath();
+        ctx.moveTo(0, ny - 5.5 * p);
+        ctx.lineTo(-flameLength * 1.25, ny);
+        ctx.lineTo(0, ny + 5.5 * p);
         ctx.closePath();
         ctx.fill();
 
-        // Inner White Core Flame
-        ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+        // 2. High-Energy Electric Cyan Jet Core
+        const coreGrad = ctx.createLinearGradient(0, ny, -flameLength, ny);
+        coreGrad.addColorStop(0, '#FFFFFF');
+        coreGrad.addColorStop(0.25, 'rgba(186, 230, 253, 0.95)');
+        coreGrad.addColorStop(0.65, 'rgba(0, 243, 255, 0.75)');
+        coreGrad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+
+        ctx.fillStyle = coreGrad;
         ctx.beginPath();
-        ctx.moveTo(0, ny - 2 * p);
-        ctx.lineTo(-flameLength * 0.45, ny);
-        ctx.lineTo(0, ny + 2 * p);
+        ctx.moveTo(0, ny - 3.2 * p);
+        ctx.lineTo(-flameLength, ny);
+        ctx.lineTo(0, ny + 3.2 * p);
         ctx.closePath();
+        ctx.fill();
+
+        // 3. Supersonic Shock Diamond Nodes
+        const d1 = -flameLength * 0.32;
+        const d2 = -flameLength * 0.62;
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = '#00F3FF';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(d1 - 3, ny);
+        ctx.lineTo(d1, ny - 2 * p);
+        ctx.lineTo(d1 + 3, ny);
+        ctx.lineTo(d1, ny + 2 * p);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.moveTo(d2 - 2, ny);
+        ctx.lineTo(d2, ny - 1.4 * p);
+        ctx.lineTo(d2 + 2, ny);
+        ctx.lineTo(d2, ny + 1.4 * p);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 4. Blinding White-Hot Throat at Nozzle Exit
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(0, ny, 2.2 * p, 0, Math.PI * 2);
         ctx.fill();
       });
 
       ctx.restore();
     }
 
+    /**
+     * Renders two powerful downward-facing rocket/plasma thruster jets beneath the wheels
+     * (rear wheel at X=24, front wheel at X=80), providing visual VTOL lift in flight mode.
+     */
+    _renderUnderWheelThrusterFlames(ctx) {
+      const p = this.transformProgress;
+      if (p <= 0.04) return;
+
+      const nozzleY = this.height * 0.78 + 4; // Emerges just beneath the wheel hub / lower chassis line
+      const wheelThrusters = [
+        { x: 24, weight: 1.05, phase: 0 },         // Rear thruster (slightly heavier lift)
+        { x: 80, weight: 0.95, phase: 2.3 }        // Front thruster (balanced, distinct phase)
+      ];
+
+      ctx.save();
+
+      wheelThrusters.forEach(jet => {
+        const wx = jet.x;
+        // Subtle dynamic flicker & pulsing tied to flight hover timer and delta time
+        const flicker = Math.sin(this.hoverTimer * 16 + jet.phase) * 2.5 + (Math.random() - 0.5) * 3.5;
+        const baseJetLen = 22 * p * jet.weight;
+        const jetLength = Math.max(8, baseJetLen + flicker);
+        const jetHalfWidth = 5.2 * p * jet.weight;
+        const coreHalfWidth = 2.8 * p * jet.weight;
+
+        // 1. Outer Soft Cyan-Blue Plasma Glow Envelope
+        const outerGrad = ctx.createLinearGradient(wx, nozzleY, wx, nozzleY + jetLength * 1.3);
+        outerGrad.addColorStop(0, 'rgba(0, 243, 255, 0.85)');
+        outerGrad.addColorStop(0.3, 'rgba(56, 189, 248, 0.5)');
+        outerGrad.addColorStop(0.7, 'rgba(37, 99, 235, 0.2)');
+        outerGrad.addColorStop(1, 'rgba(30, 64, 175, 0)');
+
+        ctx.fillStyle = outerGrad;
+        ctx.beginPath();
+        ctx.moveTo(wx - jetHalfWidth * 1.3, nozzleY);
+        ctx.lineTo(wx, nozzleY + jetLength * 1.3);
+        ctx.lineTo(wx + jetHalfWidth * 1.3, nozzleY);
+        ctx.closePath();
+        ctx.fill();
+
+        // 2. High-Energy Electric Cyan Jet Conical Flame
+        const midGrad = ctx.createLinearGradient(wx, nozzleY, wx, nozzleY + jetLength);
+        midGrad.addColorStop(0, '#FFFFFF');
+        midGrad.addColorStop(0.25, 'rgba(186, 230, 253, 0.95)');
+        midGrad.addColorStop(0.65, 'rgba(0, 243, 255, 0.75)');
+        midGrad.addColorStop(1, 'rgba(0, 243, 255, 0)');
+
+        ctx.fillStyle = midGrad;
+        ctx.beginPath();
+        ctx.moveTo(wx - jetHalfWidth, nozzleY);
+        ctx.lineTo(wx, nozzleY + jetLength);
+        ctx.lineTo(wx + jetHalfWidth, nozzleY);
+        ctx.closePath();
+        ctx.fill();
+
+        // 3. Blinding White-Hot Inner Core
+        const coreGrad = ctx.createLinearGradient(wx, nozzleY, wx, nozzleY + jetLength * 0.65);
+        coreGrad.addColorStop(0, '#FFFFFF');
+        coreGrad.addColorStop(0.6, 'rgba(255, 255, 255, 0.9)');
+        coreGrad.addColorStop(1, 'rgba(186, 230, 253, 0)');
+
+        ctx.fillStyle = coreGrad;
+        ctx.beginPath();
+        ctx.moveTo(wx - coreHalfWidth, nozzleY);
+        ctx.lineTo(wx, nozzleY + jetLength * 0.65);
+        ctx.lineTo(wx + coreHalfWidth, nozzleY);
+        ctx.closePath();
+        ctx.fill();
+
+        // 4. Supersonic Vertical Shock Diamond Node
+        const sdY = nozzleY + jetLength * 0.38;
+        ctx.fillStyle = '#FFFFFF';
+        ctx.shadowColor = '#00F3FF';
+        ctx.shadowBlur = 6 * p;
+        ctx.beginPath();
+        ctx.moveTo(wx, sdY - 2.5 * p);
+        ctx.lineTo(wx + 2.2 * p, sdY);
+        ctx.lineTo(wx, sdY + 2.5 * p);
+        ctx.lineTo(wx - 2.2 * p, sdY);
+        ctx.closePath();
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // 5. Blinding White-Hot Throat at Wheel Pod Exit
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(wx, nozzleY, 2.4 * p, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      ctx.restore();
+    }
+
+    /**
+     * Renders retractable carbon-fiber aero wings extending during flight
+     */
     _renderFlightWings(ctx) {
       const p = this.transformProgress;
       const wingLength = 36 * p;
       const wingY = this.height * 0.45;
 
       ctx.save();
-      // Back Wing
-      ctx.fillStyle = '#0f172a';
+      // Back Wing in carbon graphite with cyan leading accent
+      ctx.fillStyle = '#111827';
       ctx.strokeStyle = Config.COLORS.CYAN;
-      ctx.lineWidth = 1.5;
+      ctx.lineWidth = 1.6;
       ctx.shadowColor = Config.COLORS.CYAN;
-      ctx.shadowBlur = 10 * p;
+      ctx.shadowBlur = 9 * p;
 
       ctx.beginPath();
       ctx.moveTo(this.width * 0.35, wingY - 2);
@@ -594,112 +853,264 @@ window.DesiRoadster = window.DesiRoadster || {};
 
       // Wingtip Ion Glow Beacon
       ctx.fillStyle = '#FFFFFF';
-      ctx.shadowColor = '#FFFFFF';
+      ctx.shadowColor = '#38BDF8';
       ctx.shadowBlur = 6;
       ctx.fillRect(this.width * 0.12, wingY - wingLength, 4, 3);
 
       ctx.restore();
     }
 
+    /**
+     * Renders the authentic Tesla Roadster-inspired aerodynamic sports car chassis.
+     * Features multi-coat metallic Ultra-Red bodywork, dark tinted glass fastback canopy,
+     * sculpted side door air coves, slender front LED blade headlights, and rear ruby LED ducktail lightbar.
+     */
     _renderChassis(ctx) {
-      // 1. Aerodynamic Sleek Cyber Body
-      const bodyGrad = ctx.createLinearGradient(0, 0, 0, this.height);
-      bodyGrad.addColorStop(0, '#FFB347'); // Saffron highlight top
-      bodyGrad.addColorStop(0.35, Config.COLORS.SAFFRON);
-      bodyGrad.addColorStop(0.7, '#D45000');
-      bodyGrad.addColorStop(1, '#661A00');
-
       ctx.save();
 
-      ctx.fillStyle = bodyGrad;
+      // 1. Sleek Ultra-Red Metallic Body Gradient
+      const bodyGrad = ctx.createLinearGradient(0, 4, 0, this.height);
+      bodyGrad.addColorStop(0, '#FF4D4D');    // Crisp sunlit rim highlight
+      bodyGrad.addColorStop(0.18, '#EF233C'); // Glossy candy apple red
+      bodyGrad.addColorStop(0.45, '#DC2626'); // Deep crimson body core
+      bodyGrad.addColorStop(0.75, '#991B1B'); // Metallic body shade
+      bodyGrad.addColorStop(0.92, '#580C0C'); // Lower rocker curvature shade
+      bodyGrad.addColorStop(1, '#2B0505');    // Bottom carbon seam
+
+      // 2. Main Aerodynamic Sports-Car Silhouette Path
       ctx.beginPath();
-      // Rear bumper
-      ctx.moveTo(0, this.height * 0.65);
-      // Rear spoiler kick
-      ctx.lineTo(2, this.height * 0.38);
-      ctx.lineTo(12, this.height * 0.36);
-      // Fastback roofline
-      ctx.lineTo(34, this.height * 0.14);
-      // Windshield & roof
-      ctx.lineTo(68, this.height * 0.14);
-      // Slanted hood
-      ctx.lineTo(92, this.height * 0.48);
-      // Front cyber bumper
-      ctx.lineTo(this.width, this.height * 0.65);
-      ctx.lineTo(this.width, this.height * 0.82);
-      // Bottom side skirt
+      // Rear lower diffuser tip
+      ctx.moveTo(0, this.height * 0.82);
+      // Rear facia / kamm-tail
+      ctx.lineTo(1.5, this.height * 0.46);
+      // Integrated ducktail spoiler lip
+      ctx.lineTo(2, this.height * 0.40);
+      // Rear deck flowing forward
+      ctx.quadraticCurveTo(14, this.height * 0.40, 24, this.height * 0.38);
+      // Fastback targa glass arch rising to roof
+      ctx.quadraticCurveTo(34, this.height * 0.22, 45, this.height * 0.20);
+      // Low aerodynamic roofline
+      ctx.lineTo(58, this.height * 0.21);
+      // Steeply raked windshield cowl
+      ctx.quadraticCurveTo(68, this.height * 0.32, 73, this.height * 0.44);
+      // Sculpted low-slung front hood sloping forward
+      ctx.quadraticCurveTo(86, this.height * 0.49, 97, this.height * 0.58);
+      // Razor-sharp front nose cone
+      ctx.quadraticCurveTo(103, this.height * 0.64, 104, this.height * 0.68);
+      // Lower front nose & carbon splitter
+      ctx.lineTo(102, this.height * 0.77);
+      ctx.lineTo(96, this.height * 0.82);
+      // Front wheel arch cutout (X: 94 to 66)
+      ctx.lineTo(94, this.height * 0.82);
+      ctx.quadraticCurveTo(80, this.height * 0.44, 66, this.height * 0.82);
+      // Center carbon side skirt
+      ctx.lineTo(38, this.height * 0.82);
+      // Rear wheel arch cutout (X: 38 to 10)
+      ctx.quadraticCurveTo(24, this.height * 0.44, 10, this.height * 0.82);
+      // Under-diffuser line
       ctx.lineTo(0, this.height * 0.82);
       ctx.closePath();
-      ctx.fill();
-      ctx.restore();
 
-      // 2. Cockpit Glass Canopy
-      const glassGrad = ctx.createLinearGradient(35, 8, 75, 22);
-      glassGrad.addColorStop(0, '#00F3FF');
-      glassGrad.addColorStop(0.5, '#0F3057');
-      glassGrad.addColorStop(1, '#051329');
+      ctx.fillStyle = bodyGrad;
+      ctx.fill();
+
+      // Bold Dark Precision Contour Outline
+      ctx.strokeStyle = '#0B0D13';
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // 3. Wheel Well Shadow Liners (Dark inner arch cavities)
+      ctx.fillStyle = '#080A0E';
+      // Rear wheel well liner
+      ctx.beginPath();
+      ctx.arc(24, this.height * 0.78, 14.5, Math.PI, 0, false);
+      ctx.fill();
+      // Front wheel well liner
+      ctx.beginPath();
+      ctx.arc(80, this.height * 0.78, 14.5, Math.PI, 0, false);
+      ctx.fill();
+
+      // 4. Glossy Specular Shoulder Highlights
+      // Primary long shoulder line from rear spoiler to front fender
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(3, this.height * 0.42);
+      ctx.quadraticCurveTo(24, this.height * 0.40, 50, this.height * 0.44);
+      ctx.quadraticCurveTo(76, this.height * 0.46, 96, this.height * 0.59);
+      ctx.stroke();
+
+      // Front fender arch peak highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(68, this.height * 0.48);
+      ctx.quadraticCurveTo(80, this.height * 0.42, 92, this.height * 0.55);
+      ctx.stroke();
+
+      // Rear muscular haunch highlight over rear wheel
+      ctx.beginPath();
+      ctx.moveTo(12, this.height * 0.45);
+      ctx.quadraticCurveTo(24, this.height * 0.39, 36, this.height * 0.46);
+      ctx.stroke();
+
+      // 5. Sculpted Door Cove / Side Air Channel
+      // Distinctive concave aerodynamic scallop on side doors
+      ctx.fillStyle = 'rgba(30, 4, 4, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(40, this.height * 0.58);
+      ctx.quadraticCurveTo(52, this.height * 0.52, 64, this.height * 0.56);
+      ctx.quadraticCurveTo(58, this.height * 0.74, 42, this.height * 0.73);
+      ctx.closePath();
+      ctx.fill();
+
+      // Lower cove accent crease
+      ctx.strokeStyle = 'rgba(255, 100, 100, 0.4)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(40, this.height * 0.73);
+      ctx.lineTo(62, this.height * 0.73);
+      ctx.stroke();
+
+      // Door shut line
+      ctx.strokeStyle = 'rgba(11, 13, 19, 0.5)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(44, this.height * 0.46);
+      ctx.lineTo(43, this.height * 0.78);
+      ctx.stroke();
+
+      // Flush minimal door handle
+      ctx.fillStyle = '#0B0D13';
+      ctx.fillRect(47, this.height * 0.51, 6, 1.5);
+
+      // 6. Cockpit Canopy / Tinted Glass Fastback
+      const glassGrad = ctx.createLinearGradient(35, 8, 70, 20);
+      glassGrad.addColorStop(0, '#1E293B');   // Top reflection
+      glassGrad.addColorStop(0.35, '#0F172A'); // Midnight glass
+      glassGrad.addColorStop(0.8, '#030712');  // Deep obsidian tint
+      glassGrad.addColorStop(1, '#020408');
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(27, this.height * 0.41);
+      ctx.quadraticCurveTo(36, this.height * 0.25, 46, this.height * 0.23);
+      ctx.lineTo(56, this.height * 0.24);
+      ctx.quadraticCurveTo(65, this.height * 0.34, 70, this.height * 0.44);
+      ctx.lineTo(27, this.height * 0.44);
+      ctx.closePath();
 
       ctx.fillStyle = glassGrad;
-      ctx.beginPath();
-      ctx.moveTo(38, this.height * 0.18);
-      ctx.lineTo(64, this.height * 0.18);
-      ctx.lineTo(76, this.height * 0.45);
-      ctx.lineTo(32, this.height * 0.45);
-      ctx.closePath();
       ctx.fill();
 
-      // Specular sheen
+      // Thin black A-pillar and roof contour
+      ctx.strokeStyle = '#0B0D13';
+      ctx.lineWidth = 2.0;
+      ctx.stroke();
+
+      // Interior headrest shadow silhouette
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.beginPath();
+      ctx.ellipse(47, this.height * 0.33, 3.5, 4.5, 0.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Specular windshield glazing streak
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
-      ctx.lineWidth = 1;
+      ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.moveTo(42, this.height * 0.22);
-      ctx.lineTo(60, this.height * 0.22);
+      ctx.moveTo(56, this.height * 0.27);
+      ctx.lineTo(66, this.height * 0.42);
       ctx.stroke();
 
-      // 3. Indian Tri-Color Cyber Accent Decal Stripe along side
-      const stripeY = this.height * 0.58;
-      ctx.lineWidth = 1.5;
-      // Saffron band
-      ctx.strokeStyle = '#FF9933';
+      // Secondary soft sky reflection glaze
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(15, stripeY - 2);
-      ctx.lineTo(82, stripeY - 2);
-      ctx.stroke();
-      // White cyber band
-      ctx.strokeStyle = '#FFFFFF';
-      ctx.beginPath();
-      ctx.moveTo(18, stripeY);
-      ctx.lineTo(84, stripeY);
-      ctx.stroke();
-      // Neon Green band
-      ctx.strokeStyle = '#39FF14';
-      ctx.beginPath();
-      ctx.moveTo(21, stripeY + 2);
-      ctx.lineTo(86, stripeY + 2);
+      ctx.moveTo(35, this.height * 0.35);
+      ctx.lineTo(44, this.height * 0.26);
       ctx.stroke();
 
-      // 4. Front Cyber Headlight
-      ctx.fillStyle = Config.COLORS.CYAN;
-      ctx.shadowColor = Config.COLORS.CYAN;
-      ctx.shadowBlur = 10;
+      // Subtle B-pillar divider
+      ctx.strokeStyle = 'rgba(11, 13, 19, 0.8)';
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.moveTo(this.width - 2, this.height * 0.55);
-      ctx.lineTo(this.width - 12, this.height * 0.52);
-      ctx.lineTo(this.width - 8, this.height * 0.62);
+      ctx.moveTo(49, this.height * 0.24);
+      ctx.lineTo(48, this.height * 0.44);
+      ctx.stroke();
+      ctx.restore();
+
+      // 7. Front Headlight (Slender horizontal LED blade)
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(94, this.height * 0.60);
+      ctx.lineTo(102, this.height * 0.65);
+      ctx.lineTo(98, this.height * 0.68);
+      ctx.lineTo(93, this.height * 0.65);
       ctx.closePath();
+      // Gloss black housing
+      ctx.fillStyle = '#0B0D13';
       ctx.fill();
+      // Pure white projector lens core
+      ctx.fillStyle = '#FFFFFF';
+      ctx.shadowColor = '#38BDF8';
+      ctx.shadowBlur = 8;
+      ctx.fillRect(96, this.height * 0.63, 4, 2);
+      // Ice-cyan DRL brow
+      ctx.strokeStyle = '#38BDF8';
+      ctx.lineWidth = 1.2;
+      ctx.shadowBlur = 4;
+      ctx.beginPath();
+      ctx.moveTo(94, this.height * 0.61);
+      ctx.lineTo(102, this.height * 0.65);
+      ctx.stroke();
+      ctx.restore();
 
-      // 5. Rear Cyber Taillight (Horizon lightbar)
+      // 8. Rear Taillight (Continuous slender ruby LED lightbar)
+      ctx.save();
+      // Taillight dark bezel
+      ctx.fillStyle = '#180306';
+      ctx.fillRect(0, this.height * 0.41, 6, 3);
+      // Vibrant neon ruby laser core
       ctx.fillStyle = '#FF0055';
       ctx.shadowColor = '#FF0055';
-      ctx.shadowBlur = 8;
-      ctx.fillRect(0, this.height * 0.42, 5, 8);
-      ctx.shadowBlur = 0;
+      ctx.shadowBlur = 9;
+      ctx.fillRect(0, this.height * 0.42, 5, 2);
+      // White hot laser center
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, this.height * 0.425, 2, 1);
+      ctx.restore();
+
+      // 9. Rear Carbon Aero Diffuser
+      ctx.fillStyle = '#0F1218';
+      ctx.beginPath();
+      ctx.moveTo(0, this.height * 0.78);
+      ctx.lineTo(8, this.height * 0.79);
+      ctx.lineTo(10, this.height * 0.83);
+      ctx.lineTo(0, this.height * 0.83);
+      ctx.closePath();
+      ctx.fill();
+
+      // Subtle twin cold-gas / plasma thruster nozzle rings on rear facia
+      ctx.fillStyle = '#1E293B';
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(1, this.height * 0.58, 2.5, 0, Math.PI * 2);
+      ctx.arc(1, this.height * 0.72, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.restore();
     }
 
+    /**
+     * Renders high-performance directional turbine wheels with visible red brake calipers,
+     * or horizontal repulsor pods during flight mode.
+     */
     _renderWheels(ctx) {
       const p = this.transformProgress;
-      const wheelRadius = 14;
+      const wheelRadius = 13.5;
       const wheelY = this.height * 0.78;
       const rearWheelX = 24;
       const frontWheelX = 80;
@@ -713,45 +1124,74 @@ window.DesiRoadster = window.DesiRoadster || {};
           const foldAngle = p * (Math.PI / 2.2);
           ctx.rotate(foldAngle);
 
-          // Glowing Repulsor ring
-          ctx.fillStyle = '#0f172a';
+          // Outer dark casing contour
+          ctx.fillStyle = '#0F172A';
+          ctx.strokeStyle = '#0B1120';
+          ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(0, 0, wheelRadius * (1 - p * 0.2), 0, Math.PI * 2);
           ctx.fill();
-
-          ctx.strokeStyle = Config.COLORS.CYAN;
-          ctx.lineWidth = 3;
-          ctx.shadowColor = Config.COLORS.CYAN;
-          ctx.shadowBlur = 12 * p;
-          ctx.beginPath();
-          ctx.arc(0, 0, wheelRadius * 0.6, 0, Math.PI * 2);
           ctx.stroke();
+
+          // High-contrast cyan coil ring
+          ctx.strokeStyle = Config.COLORS.CYAN;
+          ctx.lineWidth = 2.5;
+          ctx.shadowColor = Config.COLORS.CYAN;
+          ctx.shadowBlur = 10 * p;
+          ctx.beginPath();
+          ctx.arc(0, 0, wheelRadius * 0.58, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // White center plasma dot
+          ctx.fillStyle = '#FFFFFF';
+          ctx.beginPath();
+          ctx.arc(0, 0, 2.5, 0, Math.PI * 2);
+          ctx.fill();
         } else {
-          // Normal Road Wheel
-          // Tire Rubber
-          ctx.fillStyle = '#11141a';
+          // Tesla Roadster Sport Turbine Alloy Wheels
+          // 1. Low profile performance sport tire
+          ctx.fillStyle = '#0E1117';
+          ctx.strokeStyle = '#05070A';
+          ctx.lineWidth = 1.8;
           ctx.beginPath();
           ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
           ctx.fill();
-
-          // Alloy Rim
-          ctx.fillStyle = '#2d3748';
-          ctx.beginPath();
-          ctx.arc(0, 0, wheelRadius - 4, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Cyan LED Rim Accent
-          ctx.strokeStyle = Config.COLORS.CYAN;
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.arc(0, 0, wheelRadius - 4, 0, Math.PI * 2);
           ctx.stroke();
 
-          // Rotating Alloy Spokes
+          // 2. Tread ring
+          ctx.strokeStyle = '#1E2530';
+          ctx.lineWidth = 1.2;
+          ctx.beginPath();
+          ctx.arc(0, 0, wheelRadius - 1.8, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // 3. Ventilated ceramic brake disc behind spokes
+          ctx.fillStyle = '#475569';
+          ctx.beginPath();
+          ctx.arc(0, 0, wheelRadius - 3.8, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 4. Performance Red Brake Caliper
+          ctx.fillStyle = '#EF4444';
+          ctx.beginPath();
+          ctx.arc(0, 0, wheelRadius - 3.8, -Math.PI * 0.85, -Math.PI * 0.45);
+          ctx.lineWidth = 3.2;
+          ctx.strokeStyle = '#EF4444';
+          ctx.stroke();
+
+          // 5. Turbine alloy rim outer lip
+          ctx.strokeStyle = '#64748B';
+          ctx.lineWidth = 1.4;
+          ctx.beginPath();
+          ctx.arc(0, 0, wheelRadius - 3.8, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // 6. Rotating Sport Directional Turbine Spokes
           ctx.save();
           ctx.rotate(this.wheelRotation);
-          ctx.strokeStyle = '#e2e8f0';
-          ctx.lineWidth = 2;
+          ctx.strokeStyle = '#94A3B8';
+          ctx.lineWidth = 2.0;
+          ctx.lineCap = 'round';
           for (let s = 0; s < 5; s++) {
             ctx.beginPath();
             ctx.moveTo(0, 0);
@@ -761,11 +1201,14 @@ window.DesiRoadster = window.DesiRoadster || {};
           }
           ctx.restore();
 
-          // Center Hubcap
-          ctx.fillStyle = Config.COLORS.SAFFRON;
+          // 7. Center Aero Hubcap with dark contour
+          ctx.fillStyle = '#0B0D13';
           ctx.beginPath();
-          ctx.arc(0, 0, 3, 0, Math.PI * 2);
+          ctx.arc(0, 0, 3.8, 0, Math.PI * 2);
           ctx.fill();
+          ctx.strokeStyle = '#64748B';
+          ctx.lineWidth = 1;
+          ctx.stroke();
         }
 
         ctx.restore();

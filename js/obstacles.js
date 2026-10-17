@@ -27,6 +27,7 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.animTimer = Math.random() * Math.PI * 2;
       this.hitboxInset = { top: 4, bottom: 4, left: 6, right: 6 };
       this.hasNearMissed = false;
+      this.hasCollided = false;
     }
 
     update(dt, worldSpeed) {
@@ -75,9 +76,9 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.speedMultiplier = 0.38; // Drives at steady auto pace
       this.hitboxInset = { top: 6, bottom: 2, left: 6, right: 6 };
 
-      // Classic green & yellow CNG scheme or black & yellow
+      // Classic vibrant green & yellow CNG scheme or dark slate & yellow
       this.isGreenCNG = Math.random() > 0.4;
-      this.bodyColor = this.isGreenCNG ? '#15803D' : '#1F2937';
+      this.bodyColor = this.isGreenCNG ? '#16A34A' : '#1E293B';
       this.yellowHood = '#FBBF24';
     }
 
@@ -95,18 +96,31 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.ellipse(this.width * 0.48, this.height * 0.94, this.width * 0.46, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Yellow Canopy Roof
-      ctx.fillStyle = this.yellowHood;
+      // 2. Yellow Canopy Roof with Cartoon Contour & Gloss Highlight
       ctx.beginPath();
       ctx.moveTo(8, 6);
       ctx.quadraticCurveTo(this.width * 0.5, 2, this.width - 4, 10);
       ctx.lineTo(this.width - 6, 22);
       ctx.lineTo(4, 22);
       ctx.closePath();
+      ctx.fillStyle = this.yellowHood;
       ctx.fill();
 
-      // 3. Lower Body (Green CNG or Black)
-      ctx.fillStyle = this.bodyColor;
+      // Bold cartoon outline on roof
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // Canopy gloss curve highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(12, 8);
+      ctx.quadraticCurveTo(this.width * 0.5, 5, this.width - 8, 12);
+      ctx.stroke();
+
+      // 3. Lower Body (Vibrant Green CNG or Dark Slate)
       ctx.beginPath();
       ctx.moveTo(4, 20);
       ctx.lineTo(this.width - 6, 20);
@@ -116,38 +130,62 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.lineTo(this.width * 0.28, 32);
       ctx.lineTo(2, 32);
       ctx.closePath();
+      ctx.fillStyle = this.bodyColor;
       ctx.fill();
 
-      // 4. Front Slanted Windshield
-      ctx.fillStyle = '#67E8F9';
+      // Dark cartoon contour on body
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
+
+      // Yellow waistband accent stripe along lower body
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillRect(4, 23, this.width - 8, 3.5);
+
+      // 4. Front Slanted Windshield with Diagonal Glare
       ctx.beginPath();
       ctx.moveTo(4, 20);
       ctx.lineTo(14, 8);
       ctx.lineTo(26, 8);
       ctx.lineTo(22, 20);
       ctx.closePath();
+      ctx.fillStyle = '#67E8F9';
       ctx.fill();
 
-      // Windshield frame
-      ctx.strokeStyle = '#374151';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.8;
       ctx.stroke();
 
-      // 5. Open Passenger Cabin & Driver Silhouette
-      ctx.fillStyle = '#111827';
+      // Specular glare reflection slash
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(8, 18);
+      ctx.lineTo(20, 10);
+      ctx.stroke();
+
+      // 5. Open Passenger Cabin & Driver
+      ctx.fillStyle = '#0F172A';
       ctx.fillRect(28, 9, 32, 13);
 
-      // Driver Silhouette
-      ctx.fillStyle = '#E5E7EB';
+      // Driver Silhouette with saffron/khaki turban or cap
+      ctx.fillStyle = '#F59E0B';
       ctx.beginPath();
-      ctx.arc(22, 14, 4, 0, Math.PI * 2); // Driver head
+      ctx.arc(22, 12, 4.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#9CA3AF';
-      ctx.fillRect(18, 18, 8, 8); // Driver torso
+
+      ctx.fillStyle = '#FCD34D';
+      ctx.beginPath();
+      ctx.arc(22, 14, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(18, 18, 8, 8); // Driver uniform
 
       // Chrome Grab Rail / Side Bar
-      ctx.strokeStyle = '#D1D5DB';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#E2E8F0';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.moveTo(27, 8);
       ctx.lineTo(27, 24);
@@ -159,38 +197,48 @@ window.DesiRoadster = window.DesiRoadster || {};
       this._renderWheel(ctx, 12, 34, 7);
       this._renderWheel(ctx, 54, 34, 8);
 
-      // 7. Headlight & Rear Bumper
-      // Single round front headlight
+      // 7. Headlight with Chrome Ring Bezel & Rear Reflector
+      ctx.fillStyle = '#E2E8F0';
+      ctx.beginPath();
+      ctx.arc(2, 26, 4.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
       ctx.fillStyle = '#FEF08A';
-      ctx.shadowColor = '#FDE047';
-      ctx.shadowBlur = 6;
       ctx.beginPath();
       ctx.arc(2, 26, 3, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
 
-      // Rear hazard stripes / bumper
+      // Rear hazard reflector
       ctx.fillStyle = '#EF4444';
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(this.width - 4, 25, 3, 7);
       ctx.fillRect(this.width - 4, 25, 3, 7);
 
       ctx.restore();
     }
 
     _renderWheel(ctx, wx, wy, radius) {
-      // Tire rubber
-      ctx.fillStyle = '#1F2937';
+      // Dark cartoon outer tire
+      ctx.fillStyle = '#0D1117';
+      ctx.strokeStyle = '#05070B';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.arc(wx, wy, radius, 0, Math.PI * 2);
       ctx.fill();
+      ctx.stroke();
 
-      // Rim
-      ctx.fillStyle = '#9CA3AF';
+      // Silver Steel Rim
+      ctx.fillStyle = '#CBD5E1';
       ctx.beginPath();
-      ctx.arc(wx, wy, radius - 3, 0, Math.PI * 2);
+      ctx.arc(wx, wy, radius - 2.8, 0, Math.PI * 2);
       ctx.fill();
 
-      // Hubcap
-      ctx.fillStyle = '#4B5563';
+      // Hubcap center
+      ctx.fillStyle = '#334155';
       ctx.beginPath();
       ctx.arc(wx, wy, 2, 0, Math.PI * 2);
       ctx.fill();
@@ -337,47 +385,86 @@ window.DesiRoadster = window.DesiRoadster || {};
 
       // 2. Vintage Rounded Body Curves (Hindustan Ambassador)
       // Lower Black Body
-      ctx.fillStyle = this.bodyColor;
       ctx.beginPath();
       ctx.moveTo(2, 28);
       ctx.lineTo(this.width - 2, 28);
       ctx.lineTo(this.width - 4, 34);
       ctx.lineTo(2, 34);
       ctx.closePath();
+      ctx.fillStyle = this.bodyColor;
       ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
 
       // Yellow Upper Body & Doors
-      ctx.fillStyle = this.roofColor;
       ctx.beginPath();
       ctx.moveTo(4, 28);
       ctx.lineTo(16, 18);
       ctx.lineTo(76, 18);
       ctx.lineTo(this.width - 4, 28);
       ctx.closePath();
+      ctx.fillStyle = this.roofColor;
       ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
 
       // Rounded Roof
-      ctx.fillStyle = this.roofColor;
       ctx.beginPath();
       ctx.moveTo(22, 18);
       ctx.lineTo(30, 8);
       ctx.lineTo(65, 8);
       ctx.lineTo(74, 18);
       ctx.closePath();
+      ctx.fillStyle = this.roofColor;
       ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.2;
+      ctx.lineJoin = 'round';
+      ctx.stroke();
 
-      // 3. Windows
-      ctx.fillStyle = '#93C5FD';
+      // Roof Cartoon Gloss Highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.4;
       ctx.beginPath();
+      ctx.moveTo(32, 10);
+      ctx.lineTo(63, 10);
+      ctx.stroke();
+
+      // Classic Taxi Checker Stripe along door beltline
+      const stripeY = 27;
+      for (let cx = 12; cx < this.width - 14; cx += 8) {
+        ctx.fillStyle = (Math.floor(cx / 8) % 2 === 0) ? '#0F172A' : '#FBBF24';
+        ctx.fillRect(cx, stripeY, 8, 2.5);
+      }
+
+      // 3. Cartoon Windows with Diagonal Glare
+      ctx.fillStyle = '#67E8F9';
       // Front Windshield
+      ctx.beginPath();
       ctx.moveTo(24, 17);
       ctx.lineTo(31, 10);
       ctx.lineTo(44, 10);
       ctx.lineTo(44, 17);
       ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // Front windshield glare slash
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(28, 16);
+      ctx.lineTo(38, 11);
+      ctx.stroke();
 
       // Rear Side Window
+      ctx.fillStyle = '#67E8F9';
       ctx.beginPath();
       ctx.moveTo(48, 10);
       ctx.lineTo(63, 10);
@@ -385,10 +472,21 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.lineTo(48, 17);
       ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // Rear window glare slash
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(52, 16);
+      ctx.lineTo(64, 11);
+      ctx.stroke();
 
       // 4. Roof Carrier Rack with Luggage
-      ctx.strokeStyle = '#4B5563';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1.8;
       ctx.strokeRect(34, 4, 30, 4);
       // Luggage boxes tied with rope
       ctx.fillStyle = '#B45309';
@@ -396,25 +494,47 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.fillStyle = '#047857';
       ctx.fillRect(50, 0, 11, 5);
 
-      // 5. Chrome Bumpers & Round Headlight
-      ctx.fillStyle = '#E5E7EB';
-      ctx.fillRect(0, 26, 3, 7); // Front bumper
-      ctx.fillRect(this.width - 3, 26, 3, 7); // Rear bumper
-
-      // Glowing front headlight
-      ctx.fillStyle = '#FEF08A';
-      ctx.shadowColor = '#FDE047';
-      ctx.shadowBlur = 6;
+      // Luggage tie ropes
+      ctx.strokeStyle = '#FDE047';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(3, 23, 3, 0, Math.PI * 2);
+      ctx.moveTo(42, 1);
+      ctx.lineTo(42, 5);
+      ctx.moveTo(56, 0);
+      ctx.lineTo(56, 5);
+      ctx.stroke();
+
+      // 5. Chrome Bumpers & Round Headlight
+      ctx.fillStyle = '#E2E8F0';
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(0, 26, 3.5, 7);
+      ctx.fillRect(0, 26, 3.5, 7); // Front bumper
+      ctx.strokeRect(this.width - 3.5, 26, 3.5, 7);
+      ctx.fillRect(this.width - 3.5, 26, 3.5, 7); // Rear bumper
+
+      // Round front headlight with chrome bezel
+      ctx.fillStyle = '#E2E8F0';
+      ctx.beginPath();
+      ctx.arc(3.5, 23, 4.5, 0, Math.PI * 2);
       ctx.fill();
-      ctx.shadowBlur = 0;
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#FEF08A';
+      ctx.beginPath();
+      ctx.arc(3.5, 23, 3, 0, Math.PI * 2);
+      ctx.fill();
 
       // Red taillight
       ctx.fillStyle = '#EF4444';
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(this.width - 4, 22, 3, 4);
       ctx.fillRect(this.width - 4, 22, 3, 4);
 
-      // 6. Wheels
+      // 6. Wheels (Front & Rear)
       this._renderWheel(ctx, 20, 34, 8);
       this._renderWheel(ctx, 74, 34, 8);
 
@@ -422,17 +542,25 @@ window.DesiRoadster = window.DesiRoadster || {};
     }
 
     _renderWheel(ctx, wx, wy, radius) {
-      ctx.fillStyle = '#111827';
+      // Dark cartoon outer tire
+      ctx.fillStyle = '#0D1117';
+      ctx.strokeStyle = '#05070B';
+      ctx.lineWidth = 1.8;
       ctx.beginPath();
       ctx.arc(wx, wy, radius, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#D1D5DB';
+      ctx.stroke();
+
+      // Classic Chrome Dish Hubcap
+      ctx.fillStyle = '#E2E8F0';
       ctx.beginPath();
-      ctx.arc(wx, wy, radius - 3, 0, Math.PI * 2);
+      ctx.arc(wx, wy, radius - 2.8, 0, Math.PI * 2);
       ctx.fill();
-      ctx.fillStyle = '#4B5563';
+
+      // Center Chrome Boss Button
+      ctx.fillStyle = '#475569';
       ctx.beginPath();
-      ctx.arc(wx, wy, 2, 0, Math.PI * 2);
+      ctx.arc(wx, wy, 2.4, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -461,27 +589,33 @@ window.DesiRoadster = window.DesiRoadster || {};
       // Gentle chewing and tail swish
       const chew = Math.sin(this.animTimer * 6) * 1.2;
       const tailSwish = Math.sin(this.animTimer * 4) * 4;
+      const isBlink = Math.sin(this.animTimer * 1.8) > 0.93;
 
-      // 1. Shadow
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      // 1. Ground Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
       ctx.beginPath();
       ctx.ellipse(this.width * 0.5, this.height * 0.94, this.width * 0.45, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Swishing Tail
+      // 2. Swishing Tail with Cartoon Brush
       ctx.strokeStyle = this.coatColor;
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(this.width - 12, 18);
       ctx.quadraticCurveTo(this.width - 2, 26 + tailSwish, this.width - 4, 34);
       ctx.stroke();
+
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
       // Black tail tuft
       ctx.fillStyle = '#1F2937';
       ctx.beginPath();
-      ctx.arc(this.width - 4, 34, 3, 0, Math.PI * 2);
+      ctx.arc(this.width - 4, 34, 3.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // 3. Legs & Hooves (4 legs)
+      // 3. Legs & Hooves (4 legs with dark cartoon contour)
       ctx.fillStyle = this.coatColor;
       // Front legs
       ctx.fillRect(18, 28, 5, 16);
@@ -490,24 +624,38 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.fillRect(52, 26, 5, 18);
       ctx.fillRect(59, 28, 5, 16);
 
-      // Dark hooves
-      ctx.fillStyle = '#374151';
-      ctx.fillRect(18, 42, 5, 3);
-      ctx.fillRect(26, 42, 5, 3);
-      ctx.fillRect(52, 42, 5, 3);
-      ctx.fillRect(59, 42, 5, 3);
+      // Cartoon leg outlines
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.6;
+      ctx.strokeRect(18, 28, 5, 16);
+      ctx.strokeRect(26, 26, 5, 18);
+      ctx.strokeRect(52, 26, 5, 18);
+      ctx.strokeRect(59, 28, 5, 16);
 
-      // 4. Main Torso Body
+      // Dark hooves with outline
+      ctx.fillStyle = '#1E293B';
+      ctx.fillRect(18, 42, 5, 3.5);
+      ctx.fillRect(26, 42, 5, 3.5);
+      ctx.fillRect(52, 42, 5, 3.5);
+      ctx.fillRect(59, 42, 5, 3.5);
+
+      // 4. Main Torso Body with Cartoon Outline
       ctx.fillStyle = this.coatColor;
       ctx.beginPath();
       ctx.ellipse(40, 22, 24, 13, 0, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
 
-      // 5. PROMINENT ZEBU HUMP (Iconic Indian Cow feature!)
+      // 5. PROMINENT ZEBU HUMP (Iconic Indian Cow feature with contour)
       ctx.fillStyle = this.coatColor;
       ctx.beginPath();
-      ctx.arc(30, 11, 7, 0, Math.PI * 2);
+      ctx.arc(30, 11, 7.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
       // Natural patches/spots
       ctx.fillStyle = this.spotColor;
@@ -524,42 +672,107 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.lineTo(24, 18);
       ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
 
-      // 7. Head & Snout (facing left towards incoming traffic)
+      // 7. Head & Snout (facing left towards traffic)
       ctx.fillStyle = this.coatColor;
       ctx.beginPath();
       ctx.ellipse(12, 14 + chew * 0.3, 9, 7, -0.2, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
-      // Pinkish muzzle/nose
+      // Pinkish muzzle/nose with nostrils
       ctx.fillStyle = '#FDA4AF';
       ctx.beginPath();
-      ctx.arc(6, 16 + chew * 0.5, 4, 0, Math.PI * 2);
+      ctx.arc(6, 16 + chew * 0.5, 4.5, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
-      // Calm black eye
-      ctx.fillStyle = '#111827';
+      // Nostril dots
+      ctx.fillStyle = '#881337';
       ctx.beginPath();
-      ctx.arc(13, 12, 1.8, 0, Math.PI * 2);
+      ctx.arc(5, 15.5 + chew * 0.5, 1, 0, Math.PI * 2);
+      ctx.arc(7.2, 16.5 + chew * 0.5, 1, 0, Math.PI * 2);
       ctx.fill();
 
-      // 8. Curved Graceful Horns (pointed upward)
-      ctx.strokeStyle = '#4B5563';
-      ctx.lineWidth = 2.5;
+      // Expressive Cartoon Eye with Safe Blink Animation
+      const eyeY = 12;
+      if (isBlink) {
+        // Closed happy eyelid arc
+        ctx.strokeStyle = '#0F172A';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(13, eyeY + 1, 2.2, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+      } else {
+        // Open dark eye with white catchlight reflection
+        ctx.fillStyle = '#0F172A';
+        ctx.beginPath();
+        ctx.arc(13, eyeY, 2.2, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(12.2, eyeY - 0.8, 0.8, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 8. Curved Graceful Horns (Pointed upward with light bone fill & dark tips)
+      // Horn 1 (Outer / Right)
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(15, 9);
-      ctx.quadraticCurveTo(18, 2, 16, -2); // Horn 1
+      ctx.quadraticCurveTo(18, 2, 16, -2);
       ctx.stroke();
 
+      ctx.strokeStyle = '#F1F5F9';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(15, 9);
+      ctx.quadraticCurveTo(18, 2, 16, -2);
+      ctx.stroke();
+
+      // Dark horn tip
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(15.5, -3, 2, 2.5);
+
+      // Horn 2 (Inner / Left)
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.moveTo(11, 9);
-      ctx.quadraticCurveTo(13, 3, 11, -1); // Horn 2
+      ctx.quadraticCurveTo(13, 3, 11, -1);
       ctx.stroke();
 
-      // Drooping friendly ear
+      ctx.strokeStyle = '#F1F5F9';
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(11, 9);
+      ctx.quadraticCurveTo(13, 3, 11, -1);
+      ctx.stroke();
+
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(10.5, -2, 2, 2);
+
+      // Drooping friendly ear with inner pink
+      ctx.fillStyle = this.coatColor;
+      ctx.beginPath();
+      ctx.ellipse(16, 14, 4.5, 2.5, 0.4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
       ctx.fillStyle = '#FDA4AF';
       ctx.beginPath();
-      ctx.ellipse(16, 14, 4, 2, 0.4, 0, Math.PI * 2);
+      ctx.ellipse(16, 14, 2.8, 1.4, 0.4, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -578,8 +791,8 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.speedMultiplier = 0.04; // Extremely calm & slow obstacle
       this.hitboxInset = { top: 6, bottom: 2, left: 6, right: 6 };
 
-      this.bodyColor = '#1E293B'; // Dark charcoal / slate hide
-      this.snoutColor = '#334155';
+      this.bodyColor = '#243042'; // Dark slate-charcoal hide
+      this.snoutColor = '#3B485A';
     }
 
     render(ctx) {
@@ -587,6 +800,7 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.translate(this.x, this.y);
 
       const headBob = Math.sin(this.animTimer * 4) * 0.8;
+      const isBlink = Math.sin(this.animTimer * 1.8 + 1.2) > 0.93;
 
       // 1. Ground Shadow
       ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
@@ -594,27 +808,49 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.ellipse(this.width * 0.5, this.height * 0.94, this.width * 0.46, 5, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // 2. Thick Legs
+      // 2. Thick Stocky Legs with Dark Contours
       ctx.fillStyle = this.bodyColor;
       ctx.fillRect(20, 28, 7, 16);
       ctx.fillRect(29, 26, 7, 18);
       ctx.fillRect(58, 26, 7, 18);
       ctx.fillRect(67, 28, 7, 16);
 
-      // Hooves
-      ctx.fillStyle = '#0F172A';
-      ctx.fillRect(20, 42, 7, 3);
-      ctx.fillRect(29, 42, 7, 3);
-      ctx.fillRect(58, 42, 7, 3);
-      ctx.fillRect(67, 42, 7, 3);
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 1.8;
+      ctx.strokeRect(20, 28, 7, 16);
+      ctx.strokeRect(29, 26, 7, 18);
+      ctx.strokeRect(58, 26, 7, 18);
+      ctx.strokeRect(67, 28, 7, 16);
 
-      // 3. Heavy Stocky Torso (no hump, broad shoulders)
+      // Heavy Hooves
+      ctx.fillStyle = '#080C14';
+      ctx.fillRect(20, 42, 7, 3.5);
+      ctx.fillRect(29, 42, 7, 3.5);
+      ctx.fillRect(58, 42, 7, 3.5);
+      ctx.fillRect(67, 42, 7, 3.5);
+
+      // 3. Heavy Stocky Torso (No hump, broad cartoon shoulders)
       ctx.fillStyle = this.bodyColor;
       ctx.beginPath();
       ctx.ellipse(46, 22, 28, 14, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // Muscular Spine Top Highlight
+      ctx.strokeStyle = '#3A4B63';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(46, 22, 27, -Math.PI * 0.75, -Math.PI * 0.25);
+      ctx.stroke();
+
+      // Outer Torso Contour
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.ellipse(46, 22, 28, 14, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
       // Heavy Neck
+      ctx.fillStyle = this.bodyColor;
       ctx.beginPath();
       ctx.moveTo(18, 14);
       ctx.lineTo(34, 12);
@@ -622,47 +858,101 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.lineTo(16, 26);
       ctx.closePath();
       ctx.fill();
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 2;
+      ctx.stroke();
 
       // 4. Head & Broad Muzzle
+      ctx.fillStyle = this.bodyColor;
       ctx.beginPath();
       ctx.ellipse(14, 16 + headBob, 11, 8, -0.1, 0, Math.PI * 2);
       ctx.fill();
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 2.2;
+      ctx.stroke();
 
       // Wide flat snout with nostrils
       ctx.fillStyle = this.snoutColor;
       ctx.beginPath();
-      ctx.ellipse(7, 18 + headBob, 5, 4, 0, 0, Math.PI * 2);
+      ctx.ellipse(7, 18 + headBob, 5.5, 4.5, 0, 0, Math.PI * 2);
       ctx.fill();
-
-      // Small eyes
-      ctx.fillStyle = '#000000';
-      ctx.beginPath();
-      ctx.arc(15, 14 + headBob, 1.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 5. WIDE SWEPT-BACK CRESCENT HORNS (Iconic Indian Murrah Buffalo!)
-      ctx.strokeStyle = '#64748B';
-      ctx.lineWidth = 3.5;
-      ctx.beginPath();
-      ctx.moveTo(18, 12 + headBob);
-      ctx.quadraticCurveTo(24, 0 + headBob, 32, 6 + headBob); // Sweeps back over neck
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 1.6;
       ctx.stroke();
 
+      // Nostril slits
+      ctx.fillStyle = '#080C14';
+      ctx.beginPath();
+      ctx.arc(6, 17.5 + headBob, 1.2, 0, Math.PI * 2);
+      ctx.arc(8.5, 18.5 + headBob, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Small Calm Eye with Safe Blink
+      const bufEyeY = 14 + headBob;
+      if (isBlink) {
+        ctx.strokeStyle = '#080C14';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.arc(15, bufEyeY + 0.8, 1.8, 0.2, Math.PI - 0.2);
+        ctx.stroke();
+      } else {
+        ctx.fillStyle = '#080C14';
+        ctx.beginPath();
+        ctx.arc(15, bufEyeY, 1.8, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(14.5, bufEyeY - 0.6, 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // 5. WIDE SWEPT-BACK CRESCENT HORNS (High-contrast Murrah crescent horns)
+      // Horn 1 (Outer heavy horn sweep)
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.moveTo(18, 12 + headBob);
+      ctx.quadraticCurveTo(24, -1 + headBob, 33, 5 + headBob);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#CBD5E1';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.moveTo(18, 12 + headBob);
+      ctx.quadraticCurveTo(24, -1 + headBob, 33, 5 + headBob);
+      ctx.stroke();
+
+      // Horn 2 (Inner horn sweep)
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 5;
       ctx.beginPath();
       ctx.moveTo(14, 10 + headBob);
-      ctx.quadraticCurveTo(20, 2 + headBob, 28, 7 + headBob);
+      ctx.quadraticCurveTo(20, 1 + headBob, 29, 6 + headBob);
+      ctx.stroke();
+
+      ctx.strokeStyle = '#94A3B8';
+      ctx.lineWidth = 2.8;
+      ctx.beginPath();
+      ctx.moveTo(14, 10 + headBob);
+      ctx.quadraticCurveTo(20, 1 + headBob, 29, 6 + headBob);
       ctx.stroke();
 
       // 6. Tail with brush
       ctx.strokeStyle = this.bodyColor;
-      ctx.lineWidth = 2.5;
+      ctx.lineWidth = 3;
       ctx.beginPath();
       ctx.moveTo(74, 18);
       ctx.lineTo(82, 32);
       ctx.stroke();
-      ctx.fillStyle = '#0F172A';
+
+      ctx.strokeStyle = '#0B1120';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.fillStyle = '#0B1120';
       ctx.beginPath();
-      ctx.arc(82, 33, 3, 0, Math.PI * 2);
+      ctx.arc(82, 33, 3.5, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();
@@ -932,28 +1222,77 @@ window.DesiRoadster = window.DesiRoadster || {};
     }
 
     _checkNearMiss(player, obs, onNearMiss) {
-      if (obs.hasNearMissed) return;
+      if (!player || player.isDead) return;
+      if (obs.hasNearMissed || obs.hasCollided) return;
 
       const pHitbox = player.getHitbox ? player.getHitbox() : { x: player.x, y: player.y, width: player.width, height: player.height };
       const oHitbox = obs.getHitbox();
 
-      // Check if player has safely cleared the obstacle horizontally
-      const isPastFront = pHitbox.x > (oHitbox.x + oHitbox.width * 0.5) && pHitbox.x < (oHitbox.x + oHitbox.width + 65);
-      const vertDist = Math.abs((pHitbox.y + pHitbox.height * 0.5) - (oHitbox.y + oHitbox.height * 0.5));
+      // 1. Ineligible if currently intersecting bounding boxes (overlapping = collision zone)
+      const isOverlapping = (
+        pHitbox.x < oHitbox.x + oHitbox.width &&
+        pHitbox.x + pHitbox.width > oHitbox.x &&
+        pHitbox.y < oHitbox.y + oHitbox.height &&
+        pHitbox.y + pHitbox.height > oHitbox.y
+      );
+      if (isOverlapping) return;
 
-      // Close call threshold (passed adjacent lane or jump clearance without colliding)
-      if (isPastFront && vertDist < 58 && vertDist > 20) {
+      // 2. Horizontal Pass Evaluation:
+      // Obstacles travel right-to-left. The near-miss triggers precisely once
+      // as the obstacle midpoint clears the player car's rear, within a bounded catch window.
+      const isPastRear = pHitbox.x > (oHitbox.x + oHitbox.width * 0.45);
+      const isWithinCatchWindow = pHitbox.x < (oHitbox.x + oHitbox.width + 65);
+
+      if (!isPastRear || !isWithinCatchWindow) return;
+
+      // 3. Proximity / Close-Call Threshold (Deterministic center Y distance)
+      const playerCenterY = pHitbox.y + pHitbox.height * 0.5;
+      const obsCenterY = oHitbox.y + oHitbox.height * 0.5;
+      const vertDist = Math.abs(playerCenterY - obsCenterY);
+
+      // Criteria:
+      // - Adjacent road lane pass: vertDist ~55px (lane 1-2) or ~60px (lane 0-1)
+      // - Narrow jump-over clearance: vertDist ~38-70px
+      // - Low-altitude flight skim clearance: vertDist ~38-70px
+      // - Two lanes away: vertDist = 115px (REJECTED: safe distance)
+      // - High-altitude flight: vertDist > 90px (REJECTED: safe cruising altitude)
+      // - Direct overlap without clearance: vertDist < 22px (REJECTED: collision)
+      const isCloseCall = vertDist >= 22 && vertDist <= 74;
+
+      if (isCloseCall) {
         obs.hasNearMissed = true;
 
+        // Position notification safely clear of top HUD bar (Y: 0-65)
+        const notifyX = Math.max(90, Math.min(Config.CANVAS_WIDTH - 120, player.x + player.width * 0.5));
+        const notifyY = player.y < 125 ? (player.y + player.height + 22) : (player.y - 18);
+        const notifyVy = player.y < 125 ? 18 : -32;
+
         this.floatingTexts.push({
-          text: '⚡ NEAR-MISS! +100',
-          x: player.x + 50,
-          y: player.y - 20,
-          vy: -40,
+          text: '⚡ NEAR MISS! +100',
+          x: notifyX,
+          y: notifyY,
+          vy: notifyVy,
           color: '#00F3FF',
-          life: 0.85,
-          maxLife: 0.85
+          isNearMiss: true,
+          life: 0.9,
+          maxLife: 0.9
         });
+
+        // Close-shave electric spark particles between the player and obstacle
+        const sparkX = (pHitbox.x + oHitbox.x + oHitbox.width) * 0.5;
+        const sparkY = (playerCenterY + obsCenterY) * 0.5;
+        for (let i = 0; i < 5; i++) {
+          this.impactParticles.push({
+            x: sparkX,
+            y: sparkY,
+            vx: (Math.random() - 0.5) * 140,
+            vy: (Math.random() - 0.5) * 90,
+            color: Math.random() > 0.4 ? '#00F3FF' : '#FFFFFF',
+            size: 2 + Math.random() * 2,
+            life: 0.28,
+            maxLife: 0.28
+          });
+        }
 
         if (onNearMiss) onNearMiss(obs);
       }
@@ -994,6 +1333,9 @@ window.DesiRoadster = window.DesiRoadster || {};
     }
 
     _handleCollision(player, obs, onCollision) {
+      obs.hasCollided = true;
+      obs.hasNearMissed = true; // Ineligible for near-miss if collided
+
       // Spawn collision spark particles
       const contactX = (player.x + player.width + obs.x) / 2;
       const contactY = (player.y + obs.y + obs.height) / 2;
@@ -1055,6 +1397,9 @@ window.DesiRoadster = window.DesiRoadster || {};
           this.floatingTexts.splice(i, 1);
         } else {
           t.y += t.vy * dt;
+          if (t.isNearMiss && t.y < 75) {
+            t.y = 75; // Strict barrier: never enter HUD zone (Y: 0-65)
+          }
         }
       }
     }
@@ -1090,15 +1435,38 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
 
       // Floating Texts
-      ctx.font = 'bold 13px Orbitron, sans-serif';
-      ctx.textAlign = 'center';
       for (const t of this.floatingTexts) {
         const alpha = Math.max(0, t.life / t.maxLife);
-        ctx.fillStyle = t.color;
+        const progress = 1 - (t.life / t.maxLife);
+
+        ctx.save();
         ctx.globalAlpha = alpha;
+        ctx.translate(t.x, t.y);
+
+        if (t.isNearMiss) {
+          // Punchy arcade scale pop: begins with a swift 1.25x bounce and settles to 1.0x
+          const scale = progress < 0.25 ? (1.0 + (progress / 0.25) * 0.25) : Math.max(0.9, 1.25 - (progress - 0.25) * 0.35);
+          ctx.scale(scale, scale);
+          ctx.font = '900 15px Orbitron, sans-serif';
+        } else {
+          ctx.font = 'bold 13px Orbitron, sans-serif';
+        }
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        // High-contrast dark contour outline ensures crisp readability against any background
+        ctx.strokeStyle = '#050B14';
+        ctx.lineWidth = 3;
+        ctx.strokeText(t.text, 0, 0);
+
+        // Vibrant neon glow fill
+        ctx.fillStyle = t.color;
         ctx.shadowColor = t.color;
-        ctx.shadowBlur = 8;
-        ctx.fillText(t.text, t.x, t.y);
+        ctx.shadowBlur = t.isNearMiss ? 10 : 6;
+        ctx.fillText(t.text, 0, 0);
+
+        ctx.restore();
       }
 
       ctx.restore();

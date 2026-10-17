@@ -27,6 +27,9 @@ window.DesiRoadster = window.DesiRoadster || {};
 
       // Blinking beacon timer for telecom towers
       this.beaconTimer = 0;
+
+      // Aerial Environment System (Clouds, Kites, Birds & Flight Streaks)
+      this._initAerialElements();
     }
 
     /**
@@ -220,10 +223,59 @@ window.DesiRoadster = window.DesiRoadster || {};
       return offscreen;
     }
 
+    reset() {
+      this._initAerialElements();
+      this.offsetFar = 0;
+      this.offsetMid = 0;
+      this.offsetNear = 0;
+      this.offsetRoad = 0;
+      this.beaconTimer = 0;
+    }
+
+    _initAerialElements() {
+      // 1. Pre-allocated Bounded Clouds (5 cartoon clouds with soft sunset hues)
+      this.clouds = [
+        { x: 80,  y: 65,  scale: 0.85, speedMult: 0.07, drift: 6,  opacity: 0.44 },
+        { x: 310, y: 110, scale: 1.15, speedMult: 0.11, drift: 10, opacity: 0.52 },
+        { x: 540, y: 55,  scale: 0.75, speedMult: 0.06, drift: 5,  opacity: 0.38 },
+        { x: 760, y: 125, scale: 1.05, speedMult: 0.10, drift: 8,  opacity: 0.48 },
+        { x: 980, y: 80,  scale: 0.95, speedMult: 0.08, drift: 7,  opacity: 0.42 }
+      ];
+
+      // 2. Pre-allocated Indian Fighter Kites (Patang - 2 decorative kites)
+      this.kites = [
+        { x: 380, y: 90,  baseSpeed: 16, size: 14, color: '#FF007F', tailColor: '#FF9933', phase: 0 },
+        { x: 850, y: 135, baseSpeed: 20, size: 12, color: '#00F3FF', tailColor: '#39FF14', phase: 2.2 }
+      ];
+
+      // 3. Pre-allocated Twilight Birds (3 birds flying across horizon)
+      this.birds = [
+        { x: 220, y: 75, wingSpan: 7.5, speedMult: 0.18, phase: 0 },
+        { x: 245, y: 88, wingSpan: 6.5, speedMult: 0.18, phase: 0.8 },
+        { x: 210, y: 95, wingSpan: 6.0, speedMult: 0.18, phase: 1.5 }
+      ];
+
+      // 4. Pre-allocated High-Altitude Flight Speed Streaks (10 streaks)
+      this.flightStreaks = [];
+      for (let i = 0; i < 10; i++) {
+        this.flightStreaks.push({
+          x: Math.random() * this.width,
+          y: 65 + Math.random() * 160,
+          length: 40 + Math.random() * 65,
+          speedMult: 1.4 + Math.random() * 0.8,
+          alpha: 0.18 + Math.random() * 0.22
+        });
+      }
+
+      this.flightIntensity = 0; // Smooth 0..1 transition for flight speed streaks
+      this.kiteAnimTimer = 0;
+      this.birdAnimTimer = 0;
+    }
+
     /**
-     * Updates offsets based on delta time and world scroll speed
+     * Updates offsets and aerial elements based on delta time and world scroll speed
      */
-    update(dt, speed) {
+    update(dt, speed, player = null) {
       this.beaconTimer = (this.beaconTimer + dt * 4) % (Math.PI * 2);
 
       // Scroll layers with respective parallax multipliers
@@ -234,16 +286,252 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.offsetFar = (this.offsetFar + farDelta) % this.skylineSegmentWidth;
       this.offsetMid = (this.offsetMid + midDelta) % this.skylineSegmentWidth;
       this.offsetRoad = (this.offsetRoad + roadDelta) % 120; // 120px lane marker stride
+
+      // Update aerial objects (clouds, kites, birds, flight streaks)
+      this._updateAerialElements(dt, speed, player);
+    }
+
+    _updateAerialElements(dt, speed, player) {
+      this.kiteAnimTimer += dt;
+      this.birdAnimTimer += dt;
+
+      // Flight mode intensity lerp for aerial speed depth
+      const isFlying = player && (player.mode === 'FLIGHT' || (player.transformProgress && player.transformProgress > 0.1));
+      const targetIntensity = isFlying ? 1.0 : 0.0;
+      this.flightIntensity += (targetIntensity - this.flightIntensity) * Math.min(dt * 4, 1);
+
+      // 1. Update Clouds (Bounded recycling: off-screen clouds wrap smoothly to right)
+      for (let i = 0; i < this.clouds.length; i++) {
+        const c = this.clouds[i];
+        const scrollSpeed = speed * c.speedMult + c.drift;
+        c.x -= scrollSpeed * dt;
+
+        // Recycle when completely off left edge
+        if (c.x + 50 * c.scale < -60) {
+          c.x = this.width + 40 + Math.random() * 90;
+          c.y = 50 + Math.random() * 115;
+          c.scale = 0.75 + Math.random() * 0.45;
+          c.speedMult = 0.06 + Math.random() * 0.07;
+          c.opacity = 0.38 + Math.random() * 0.15;
+        }
+      }
+
+      // 2. Update Indian Kites
+      for (let i = 0; i < this.kites.length; i++) {
+        const k = this.kites[i];
+        k.x -= (speed * 0.09 + k.baseSpeed) * dt;
+        k.y += Math.sin(this.kiteAnimTimer * 2 + k.phase) * (dt * 5);
+
+        if (k.x < -60) {
+          k.x = this.width + 60 + Math.random() * 120;
+          k.y = 65 + Math.random() * 95;
+        }
+      }
+
+      // 3. Update Birds Flock
+      for (let i = 0; i < this.birds.length; i++) {
+        const b = this.birds[i];
+        b.x -= (speed * b.speedMult + 35) * dt;
+        b.y += Math.sin(this.birdAnimTimer * 3 + b.phase) * (dt * 4);
+
+        if (b.x < -50) {
+          b.x = this.width + 40 + i * 25;
+          b.y = 65 + (i * 12);
+        }
+      }
+
+      // 4. Update High-Altitude Flight Speed Streaks
+      if (this.flightIntensity > 0.02) {
+        for (let i = 0; i < this.flightStreaks.length; i++) {
+          const s = this.flightStreaks[i];
+          s.x -= (speed * s.speedMult + 160) * dt;
+
+          if (s.x + s.length < -20) {
+            s.x = this.width + 20 + Math.random() * 100;
+            s.y = 65 + Math.random() * 165;
+            s.length = 40 + Math.random() * 65;
+          }
+        }
+      }
     }
 
     /**
-     * Renders the complete scene background
+     * Renders the complete scene background including aerial elements
      */
     render(ctx) {
       this._renderSky(ctx);
+      this._renderCloudsAndSkyElements(ctx);
       this._renderFarSkyline(ctx);
       this._renderRoadside(ctx);
       this._renderRoad(ctx);
+      this._renderFlightSpeedStreaks(ctx);
+    }
+
+    _renderCloudsAndSkyElements(ctx) {
+      // 1. Render Clouds
+      for (let i = 0; i < this.clouds.length; i++) {
+        const c = this.clouds[i];
+        this._drawCartoonCloud(ctx, c.x, c.y, c.scale, c.opacity);
+      }
+
+      // 2. Render Indian Fighter Kites
+      for (let i = 0; i < this.kites.length; i++) {
+        this._drawKite(ctx, this.kites[i]);
+      }
+
+      // 3. Render Silhouette Birds
+      for (let i = 0; i < this.birds.length; i++) {
+        this._drawBird(ctx, this.birds[i]);
+      }
+    }
+
+    _drawCartoonCloud(ctx, cx, cy, scale, opacity) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.globalAlpha = opacity;
+
+      // Sunset twilight gradient fill
+      const cGrad = ctx.createLinearGradient(0, -20 * scale, 0, 16 * scale);
+      cGrad.addColorStop(0, '#FFE8D6');   // Warm peach sunset top
+      cGrad.addColorStop(0.45, '#FDBA74'); // Golden orange
+      cGrad.addColorStop(1, '#A855F7');   // Twilight purple underside
+
+      ctx.fillStyle = cGrad;
+      ctx.beginPath();
+      // Center main dome
+      ctx.arc(0, 0, 20 * scale, 0, Math.PI * 2);
+      // Left puff
+      ctx.arc(-18 * scale, 4 * scale, 14 * scale, 0, Math.PI * 2);
+      // Right puff
+      ctx.arc(18 * scale, 3 * scale, 16 * scale, 0, Math.PI * 2);
+      // Far left small puff
+      ctx.arc(-32 * scale, 8 * scale, 10 * scale, 0, Math.PI * 2);
+      // Far right small puff
+      ctx.arc(32 * scale, 8 * scale, 11 * scale, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Fluffy underside shadow
+      ctx.fillStyle = 'rgba(88, 28, 135, 0.22)';
+      ctx.beginPath();
+      ctx.ellipse(0, 12 * scale, 36 * scale, 6 * scale, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Warm upper rim highlight
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.lineWidth = 1.5 * scale;
+      ctx.beginPath();
+      ctx.arc(0, 0, 20 * scale, Math.PI * 1.1, Math.PI * 1.9);
+      ctx.arc(18 * scale, 3 * scale, 16 * scale, Math.PI * 1.2, Math.PI * 1.8);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    _drawKite(ctx, kite) {
+      ctx.save();
+      ctx.translate(kite.x, kite.y);
+
+      // Subtle aerodynamic sway in the wind
+      const sway = Math.sin(this.kiteAnimTimer * 2.5 + kite.phase) * 0.14;
+      ctx.rotate(sway);
+
+      const s = kite.size;
+
+      // 1. Fluttering Tail Thread
+      ctx.strokeStyle = kite.tailColor;
+      ctx.lineWidth = 1.3;
+      ctx.beginPath();
+      ctx.moveTo(0, s * 1.2);
+      const t1 = Math.sin(this.kiteAnimTimer * 5 + kite.phase) * 6;
+      const t2 = Math.cos(this.kiteAnimTimer * 4 + kite.phase) * 8;
+      ctx.quadraticCurveTo(-5 + t1, s * 1.8, t2, s * 2.8);
+      ctx.stroke();
+
+      // 2. Diamond Kite Paper Body with Cartoon Outline
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 1.2);  // Top vertex
+      ctx.lineTo(s * 0.95, 0);  // Right vertex
+      ctx.lineTo(0, s * 1.2);   // Bottom vertex
+      ctx.lineTo(-s * 0.95, 0); // Left vertex
+      ctx.closePath();
+
+      ctx.fillStyle = kite.color;
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.6;
+      ctx.stroke();
+
+      // 3. Bamboo Spine (Vertical)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(0, -s * 1.2);
+      ctx.lineTo(0, s * 1.2);
+      ctx.stroke();
+
+      // 4. Curved Bow Spar (Horizontal)
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.95, 0);
+      ctx.quadraticCurveTo(0, -s * 0.45, s * 0.95, 0);
+      ctx.stroke();
+
+      // 5. Small Triangular Tail
+      ctx.fillStyle = kite.tailColor;
+      ctx.beginPath();
+      ctx.moveTo(-3, s * 1.2);
+      ctx.lineTo(3, s * 1.2);
+      ctx.lineTo(0, s * 1.55);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    _drawBird(ctx, bird) {
+      ctx.save();
+      ctx.translate(bird.x, bird.y);
+
+      const flap = Math.sin(this.birdAnimTimer * 7 + bird.phase);
+      const span = bird.wingSpan;
+      const wingY = -flap * 4;
+
+      ctx.strokeStyle = '#221538'; // Dark twilight silhouette
+      ctx.lineWidth = 1.8;
+      ctx.lineCap = 'round';
+
+      ctx.beginPath();
+      // Left Wing arc
+      ctx.moveTo(-span, wingY);
+      ctx.quadraticCurveTo(-span * 0.45, -wingY * 0.4, 0, 0);
+      // Right Wing arc
+      ctx.quadraticCurveTo(span * 0.45, -wingY * 0.4, span, wingY);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    _renderFlightSpeedStreaks(ctx) {
+      if (this.flightIntensity < 0.02) return;
+
+      ctx.save();
+      for (let i = 0; i < this.flightStreaks.length; i++) {
+        const s = this.flightStreaks[i];
+        const alpha = (s.alpha * this.flightIntensity).toFixed(3);
+
+        const grad = ctx.createLinearGradient(s.x, s.y, s.x + s.length, s.y);
+        grad.addColorStop(0, 'rgba(0, 243, 255, 0)');
+        grad.addColorStop(0.4, `rgba(0, 243, 255, ${alpha})`);
+        grad.addColorStop(0.8, `rgba(255, 255, 255, ${alpha})`);
+        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+        ctx.strokeStyle = grad;
+        ctx.lineWidth = 1.4;
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y);
+        ctx.lineTo(s.x + s.length, s.y);
+        ctx.stroke();
+      }
+      ctx.restore();
     }
 
     _renderSky(ctx) {

@@ -46,6 +46,7 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.coinsCount = 0;
       this.nearMissScore = 0;
       this.nearMissCount = 0;
+      this.scorePopTimer = 0;
       this.highScore = parseInt(localStorage.getItem('desi_roadster_highscore') || '0', 10);
 
       // DOM UI Elements
@@ -122,11 +123,18 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.coinsCount = 0;
       this.nearMissScore = 0;
       this.nearMissCount = 0;
+      this.scorePopTimer = 0;
+      if (this.ui.scoreDisplay) {
+        this.ui.scoreDisplay.style.color = '';
+        this.ui.scoreDisplay.style.textShadow = '';
+        this.ui.scoreDisplay.style.transform = '';
+      }
       this.currentSpeed = Config.BASE_SPEED;
       this.screenShake = 0;
 
       this.player = new Player();
       this.obstacles.reset();
+      this.background.reset();
 
       // UI Overlays
       this.ui.startScreen.classList.add('hidden');
@@ -285,12 +293,22 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
 
       // 8. Update Subsystems
-      this.background.update(dt, this.currentSpeed);
+      this.background.update(dt, this.currentSpeed, this.player);
       this.player.update(dt, this.input, this.currentSpeed);
 
       // Screen shake decay
       if (this.screenShake > 0) {
         this.screenShake = Math.max(0, this.screenShake - dt * 20);
+      }
+
+      // Score POP highlight decay
+      if (this.scorePopTimer > 0) {
+        this.scorePopTimer = Math.max(0, this.scorePopTimer - dt);
+        if (this.scorePopTimer === 0 && this.ui.scoreDisplay) {
+          this.ui.scoreDisplay.style.color = '';
+          this.ui.scoreDisplay.style.textShadow = '';
+          this.ui.scoreDisplay.style.transform = '';
+        }
       }
 
       // 9. Update Obstacles, Near-Misses, and Coins
@@ -319,6 +337,13 @@ window.DesiRoadster = window.DesiRoadster || {};
           this.nearMissCount++;
           this.nearMissScore += 100;
           this.audio.playNearMiss();
+          this.scorePopTimer = 0.35;
+          if (this.ui.scoreDisplay) {
+            this.ui.scoreDisplay.style.color = '#FFFFFF';
+            this.ui.scoreDisplay.style.textShadow = '0 0 14px #00F3FF, 0 0 24px #FFFFFF';
+            this.ui.scoreDisplay.style.transform = 'scale(1.18)';
+            this.ui.scoreDisplay.style.transition = 'transform 0.1s ease, color 0.1s ease';
+          }
         },
         // Coin Collect Callback (+50 PTS & +4% Battery)
         (coin) => {
