@@ -60,12 +60,14 @@ window.DesiRoadster = window.DesiRoadster || {};
         batteryBar: document.getElementById('battery-bar'),
         batteryPct: document.getElementById('battery-pct'),
         muteBtn: document.getElementById('mute-btn'),
+        pauseToggleBtn: document.getElementById('pause-toggle-btn'),
         startScreen: document.getElementById('start-screen'),
         startBtn: document.getElementById('start-btn'),
         pauseScreen: document.getElementById('pause-screen'),
         resumeBtn: document.getElementById('resume-btn'),
         gameoverScreen: document.getElementById('gameover-screen'),
         restartBtn: document.getElementById('restart-btn'),
+        touchControls: document.getElementById('touch-controls'),
         finalScore: document.getElementById('final-score'),
         finalDistance: document.getElementById('final-distance'),
         finalCoins: document.getElementById('final-coins'),
@@ -85,6 +87,10 @@ window.DesiRoadster = window.DesiRoadster || {};
       // Resume Button
       if (this.ui.resumeBtn) {
         this.ui.resumeBtn.addEventListener('click', () => this.togglePause());
+      }
+      // Quick Pause Toggle Button in HUD
+      if (this.ui.pauseToggleBtn) {
+        this.ui.pauseToggleBtn.addEventListener('click', () => this.togglePause());
       }
       // Restart Button
       if (this.ui.restartBtn) {
@@ -127,6 +133,9 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.ui.pauseScreen.classList.add('hidden');
       this.ui.gameoverScreen.classList.add('hidden');
       this.ui.hud.classList.remove('hidden');
+      if (this.ui.touchControls) {
+        this.ui.touchControls.classList.remove('hidden');
+      }
 
       this._updateHUD();
     }
@@ -140,11 +149,17 @@ window.DesiRoadster = window.DesiRoadster || {};
         this.audio.playClick();
         this.state = STATE.PAUSED;
         this.ui.pauseScreen.classList.remove('hidden');
+        if (this.ui.touchControls) {
+          this.ui.touchControls.classList.add('hidden');
+        }
       } else if (this.state === STATE.PAUSED) {
         this.audio.playClick();
         this.state = STATE.PLAYING;
         this.lastTime = performance.now();
         this.ui.pauseScreen.classList.add('hidden');
+        if (this.ui.touchControls) {
+          this.ui.touchControls.classList.remove('hidden');
+        }
       }
     }
 
@@ -171,6 +186,9 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.ui.finalHighscore.textContent = `${this.highScore}`;
 
       this.ui.gameoverScreen.classList.remove('hidden');
+      if (this.ui.touchControls) {
+        this.ui.touchControls.classList.add('hidden');
+      }
     }
 
     /**

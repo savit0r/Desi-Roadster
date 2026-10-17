@@ -62,14 +62,17 @@ Desi Roadster/
 
 ## 🕹️ Pilot Controls
 
-| Action | Primary Key | Alternate Key | Description |
+| Action | Keyboard | Touch / Mobile Screen | Description |
 | :--- | :---: | :---: | :--- |
-| **Start / Jump** | <kbd>Space</kbd> | <kbd>Enter</kbd> | Launch engine on Start Screen; Jump in Road Mode |
-| **Steer Up / Climb** | <kbd>W</kbd> | <kbd>↑</kbd> | Shift to upper lane (Road) / Climb altitude (Flight) |
-| **Steer Down / Dive** | <kbd>S</kbd> | <kbd>↓</kbd> | Shift to lower lane (Road) / Dive lower (Flight) |
-| **Brake / Boost** | <kbd>A</kbd> / <kbd>D</kbd> | <kbd>←</kbd> / <kbd>→</kbd> | Adjust relative road position & scroll speed |
-| **Switch Mode** | <kbd>F</kbd> | <kbd>Shift</kbd> | Transform between **Road Drive** ⇄ **Flight Hover** |
-| **Pause / Resume** | <kbd>P</kbd> | <kbd>Escape</kbd> | Toggle game pause |
+| **Start / Restart** | <kbd>Space</kbd> / <kbd>Enter</kbd> | Tap Button | Launch engine; Play again after Game Over |
+| **Steer Up / Climb** | <kbd>W</kbd> / <kbd>↑</kbd> | <kbd>▲</kbd> D-Pad Up | Shift to upper lane (Road) / Climb altitude (Flight) |
+| **Steer Down / Dive** | <kbd>S</kbd> / <kbd>↓</kbd> | <kbd>▼</kbd> D-Pad Down | Shift to lower lane (Road) / Dive lower (Flight) |
+| **Brake** | <kbd>A</kbd> / <kbd>←</kbd> | <kbd>◀</kbd> D-Pad Left | Slow down relative speed |
+| **Nitro Boost** | <kbd>D</kbd> / <kbd>→</kbd> | <kbd>▶</kbd> D-Pad Right | Accelerate forward relative speed |
+| **Jump** | <kbd>Space</kbd> | <kbd>🦘 JUMP</kbd> | Leap over obstacles (Road Mode only) |
+| **Transform Mode** | <kbd>F</kbd> / <kbd>Shift</kbd> | <kbd>⚡ FLY</kbd> | Transform between **Road Drive** ⇄ **Flight Hover** |
+| **Pause / Resume** | <kbd>P</kbd> / <kbd>Escape</kbd> | <kbd>⏸️</kbd> HUD Button | Pause or resume gameplay |
+| **Toggle Sound** | <kbd>M</kbd> | <kbd>🔊</kbd> HUD Button | Mute / Unmute all sound effects |
 
 ---
 
@@ -151,10 +154,12 @@ The game differentiates itself through its fluid two-tier locomotion system:
   - Near-miss close-shave bonuses (+100 pts)
   - Distance-based scoring strictly frozen when not in PLAYING state
   - High score persistence via `localStorage`
-- [x] **Phase 4: Audio & Complete Arcade Polish**
-  - Procedural Web Audio API sound synthesizer (coin chimes, whooshes, jumps, cyber transformations, crash explosions, game over fanfare)
-  - Persistent master audio mute toggle (<kbd>M</kbd> and HUD button)
-  - Chassis integrity (3 hearts) & Game Over breakdown modal with stats
-  - Guaranteed freeze on game over and full state reset on restart
+- [x] **Phase 5: Mobile Responsiveness & On-Screen Touch Controls**
+  - Fully responsive letterbox viewport across smartphones (portrait/landscape) and tablets
+  - Virtual left cluster: 4-way D-Pad (Up/Climb, Down/Dive, Brake, Nitro Boost)
+  - Virtual right cluster: Action buttons (🦘 JUMP, ⚡ FLY) with neon glow and haptic pulse feedback
+  - Multi-touch Pointer Events with zero scroll-lock interference and clean overlay visibility management
+  - Compact adaptive HUD with safe-area notch padding (`env(safe-area-inset-*)`)
+
 
 

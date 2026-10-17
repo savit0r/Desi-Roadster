@@ -53,7 +53,34 @@
             <div id="battery-bar" class="battery-bar-fill"></div>
           </div>
         </div>
+        <button id="pause-toggle-btn" class="hud-card hud-btn" title="Pause Game (P)">⏸️</button>
         <button id="mute-btn" class="hud-card hud-btn" title="Toggle Sound (M)">🔊</button>
+      </div>
+    </div>
+
+    <!-- Mobile On-Screen Touch Controls -->
+    <div id="touch-controls" class="touch-controls hidden">
+      <!-- Left D-Pad Cluster (Steering, Climb, Brake, Boost) -->
+      <div class="touch-cluster touch-left">
+        <button class="touch-btn dpad-btn dpad-up" data-action="up" aria-label="Steer Up / Climb">▲</button>
+        <div class="dpad-mid">
+          <button class="touch-btn dpad-btn dpad-left" data-action="left" aria-label="Brake">◀</button>
+          <div class="dpad-core"></div>
+          <button class="touch-btn dpad-btn dpad-right" data-action="right" aria-label="Nitro Boost">▶</button>
+        </div>
+        <button class="touch-btn dpad-btn dpad-down" data-action="down" aria-label="Steer Down / Dive">▼</button>
+      </div>
+
+      <!-- Right Action Cluster (Jump & Flight Transformation) -->
+      <div class="touch-cluster touch-right">
+        <button class="touch-btn action-btn btn-jump" data-action="jump" aria-label="Jump">
+          <span class="btn-icon">🦘</span>
+          <span class="btn-text">JUMP</span>
+        </button>
+        <button class="touch-btn action-btn btn-flight" data-action="toggleFlight" aria-label="Transform Flight">
+          <span class="btn-icon">⚡</span>
+          <span class="btn-text">FLY</span>
+        </button>
       </div>
     </div>
 
@@ -83,28 +110,28 @@
               <span class="key-desc">Brake / Nitro Boost</span>
             </div>
             <div class="control-item">
-              <span class="key-badge">SPACE</span>
+              <span class="key-badge">SPACE / 🦘</span>
               <span class="key-desc">Jump (Road Mode)</span>
             </div>
             <div class="control-item">
-              <span class="key-badge">M</span>
+              <span class="key-badge">M / 🔊</span>
               <span class="key-desc">Mute / Unmute Audio</span>
             </div>
             <div class="control-item">
-              <span class="key-badge">P / ESC</span>
+              <span class="key-badge">P / ⏸️</span>
               <span class="key-desc">Pause Game</span>
             </div>
             <div class="control-item full-width highlight-row">
-              <span class="key-badge key-special">F / SHIFT</span>
+              <span class="key-badge key-special">F / SHIFT / ⚡</span>
               <span class="key-desc"><strong>SWITCH MODE:</strong> Road Drive ⇄ Flight Hover</span>
             </div>
           </div>
         </div>
 
         <button id="start-btn" class="arcade-btn pulse-glow">
-          START ENGINE (PRESS SPACE)
+          START ENGINE (TAP OR SPACE)
         </button>
-        <p class="sub-hint">Tip: Collect ₹ Rupee coins and pull off close near-misses for massive points!</p>
+        <p class="sub-hint">Mobile: Use on-screen D-Pad (left) and Jump/Fly buttons (right)!</p>
       </div>
     </div>
 
@@ -113,7 +140,7 @@
       <div class="arcade-panel small-panel">
         <h2>GAME PAUSED</h2>
         <p>Take a kadak chai break ☕</p>
-        <button id="resume-btn" class="arcade-btn">RESUME (P / ESC)</button>
+        <button id="resume-btn" class="arcade-btn">RESUME</button>
       </div>
     </div>
 
@@ -147,7 +174,7 @@
         </div>
 
         <button id="restart-btn" class="arcade-btn pulse-glow">
-          PLAY AGAIN (PRESS SPACE / ENTER)
+          PLAY AGAIN (TAP OR SPACE)
         </button>
       </div>
     </div>
