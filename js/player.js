@@ -77,6 +77,34 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.invulnerableTimer = 0;
       this.health = 3; // 3 Chassis integrity lives
       this.isDead = false;
+
+      // Upgrades & Modifiers
+      this.maxBattery = Config.BATTERY_MAX;
+      this.suspensionDamping = 1.0;
+    }
+
+    applyUpgrades(upgradeManager) {
+      if (!upgradeManager) return;
+      if (upgradeManager.hasExtraBattery()) {
+        this.maxBattery = Math.round(Config.BATTERY_MAX * 1.3);
+      } else {
+        this.maxBattery = Config.BATTERY_MAX;
+      }
+      this.battery = this.maxBattery;
+
+      if (upgradeManager.hasSuspension()) {
+        this.suspensionDamping = 0.65; // 35% less severe pothole jolt
+      } else {
+        this.suspensionDamping = 1.0;
+      }
+    }
+
+    launchFromPothole(force = -420) {
+      if (this.mode === 'ROAD') {
+        this.vy = force;
+        this.isGrounded = false;
+        this._spawnLandingDust();
+      }
     }
 
     /**
@@ -215,7 +243,7 @@ window.DesiRoadster = window.DesiRoadster || {};
         case PLAYER_STATE.ROAD:
           this._updateRoadPhysics(dt, input);
           // Regenerative charging on asphalt
-          this.battery = Math.min(Config.BATTERY_MAX, this.battery + Config.BATTERY_RECHARGE_ROAD * dt);
+          this.battery = Math.min(this.maxBattery || Config.BATTERY_MAX, this.battery + Config.BATTERY_RECHARGE_ROAD * dt);
           this.transformProgress = Math.max(0, this.transformProgress - dt * 5);
           break;
 
@@ -861,32 +889,41 @@ window.DesiRoadster = window.DesiRoadster || {};
     }
 
     /**
-     * Renders the authentic Tesla Roadster-inspired aerodynamic sports car chassis.
-     * Features multi-coat metallic Ultra-Red bodywork, dark tinted glass fastback canopy,
-     * sculpted side door air coves, slender front LED blade headlights, and rear ruby LED ducktail lightbar.
+     * Renders a high-quality cartoon red electric sports car in rear three-quarter perspective.
+     * Features:
+     * - Recognizable aerodynamic electric sports-car proportions (low nose, sculpted haunches, kamm-tail).
+     * - Rear three-quarter view showing the rear fascia, upper targa deck, and near flank.
+     * - Multi-coat candy apple red with warm sunset peach/gold rim highlights and twilight purple ambient shadows.
+     * - Dark tinted canopy glass with clean specular glazing and sunset reflection.
+     * - Wrap-around ruby neon lightbar with hot core and warm glow.
+     * - Slender front LED blade headlight with ice-cyan brow.
+     * - Sculpted side aero channel with door shut line and minimal handle.
+     * - Carbon-fiber aero rear diffuser and cold-gas nozzle rings.
+     * - Consistent 2.2px dark navy-charcoal cartoon outlines for maximum arcade readability.
      */
     _renderChassis(ctx) {
       ctx.save();
 
-      // 1. Sleek Ultra-Red Metallic Body Gradient
+      // 1. Sleek Multi-Coat Ultra-Red Metallic Body Gradient with Warm Sunset Lighting
+      // Top receives warm sunset peach-gold ambient; bottom grounds into rich twilight plum/purple
       const bodyGrad = ctx.createLinearGradient(0, 4, 0, this.height);
-      bodyGrad.addColorStop(0, '#FF4D4D');    // Crisp sunlit rim highlight
-      bodyGrad.addColorStop(0.18, '#EF233C'); // Glossy candy apple red
-      bodyGrad.addColorStop(0.45, '#DC2626'); // Deep crimson body core
-      bodyGrad.addColorStop(0.75, '#991B1B'); // Metallic body shade
-      bodyGrad.addColorStop(0.92, '#580C0C'); // Lower rocker curvature shade
-      bodyGrad.addColorStop(1, '#2B0505');    // Bottom carbon seam
+      bodyGrad.addColorStop(0, '#FFA07A');    // Warm Indian sunset peach rim highlight
+      bodyGrad.addColorStop(0.12, '#FF334B'); // Glossy candy sports-car red
+      bodyGrad.addColorStop(0.40, '#DC2626'); // Deep crimson body core
+      bodyGrad.addColorStop(0.72, '#991B1B'); // Rich metallic wine shade
+      bodyGrad.addColorStop(0.90, '#4A081A'); // Twilight plum ambient shadow
+      bodyGrad.addColorStop(1, '#20030C');    // Deep graphite-purple base
 
-      // 2. Main Aerodynamic Sports-Car Silhouette Path
+      // 2. Main Aerodynamic Sports-Car Silhouette Path (Rear Three-Quarter Stance)
       ctx.beginPath();
-      // Rear lower diffuser tip
+      // Rear lower carbon diffuser tip
       ctx.moveTo(0, this.height * 0.82);
-      // Rear facia / kamm-tail
+      // Rear vertical kamm-tail fascia
       ctx.lineTo(1.5, this.height * 0.46);
-      // Integrated ducktail spoiler lip
+      // Integrated aerodynamic ducktail spoiler lip
       ctx.lineTo(2, this.height * 0.40);
-      // Rear deck flowing forward
-      ctx.quadraticCurveTo(14, this.height * 0.40, 24, this.height * 0.38);
+      // Rear targa deck flowing forward into muscular haunch
+      ctx.quadraticCurveTo(14, this.height * 0.39, 24, this.height * 0.37);
       // Fastback targa glass arch rising to roof
       ctx.quadraticCurveTo(34, this.height * 0.22, 45, this.height * 0.20);
       // Low aerodynamic roofline
@@ -914,13 +951,36 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.fillStyle = bodyGrad;
       ctx.fill();
 
-      // Bold Dark Precision Contour Outline
-      ctx.strokeStyle = '#0B0D13';
+      // Bold Dark Precision Contour Outline (Consistent Cartoon Styling)
+      ctx.strokeStyle = '#0A0E1A';
       ctx.lineWidth = 2.2;
       ctx.lineJoin = 'round';
       ctx.stroke();
 
-      // 3. Wheel Well Shadow Liners (Dark inner arch cavities)
+      // 3. Rear Three-Quarter Kamm-Tail Facet (Facing Viewer/Camera Rear)
+      // Gives the back of the car true 3D perspective depth in a side-scrolling format
+      const rearFacetGrad = ctx.createLinearGradient(0, this.height * 0.40, 8, this.height * 0.82);
+      rearFacetGrad.addColorStop(0, '#7F1D1D');
+      rearFacetGrad.addColorStop(0.6, '#550815');
+      rearFacetGrad.addColorStop(1, '#2D040C');
+      ctx.fillStyle = rearFacetGrad;
+      ctx.beginPath();
+      ctx.moveTo(0, this.height * 0.40);
+      ctx.lineTo(7, this.height * 0.42);
+      ctx.lineTo(9, this.height * 0.82);
+      ctx.lineTo(0, this.height * 0.82);
+      ctx.closePath();
+      ctx.fill();
+
+      // Facet ridge line defining the rear corner bevel
+      ctx.strokeStyle = 'rgba(255, 120, 120, 0.35)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(7, this.height * 0.42);
+      ctx.lineTo(9, this.height * 0.82);
+      ctx.stroke();
+
+      // 4. Wheel Well Shadow Liners (Dark inner arch cavities)
       ctx.fillStyle = '#080A0E';
       // Rear wheel well liner
       ctx.beginPath();
@@ -931,116 +991,136 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.arc(80, this.height * 0.78, 14.5, Math.PI, 0, false);
       ctx.fill();
 
-      // 4. Glossy Specular Shoulder Highlights
-      // Primary long shoulder line from rear spoiler to front fender
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
-      ctx.lineWidth = 1.6;
+      // Flared wheel arch rim highlights (showing wide muscular fenders)
+      ctx.strokeStyle = 'rgba(254, 215, 170, 0.4)'; // Warm sunset glint on arch lip
+      ctx.lineWidth = 1.3;
       ctx.beginPath();
-      ctx.moveTo(3, this.height * 0.42);
-      ctx.quadraticCurveTo(24, this.height * 0.40, 50, this.height * 0.44);
-      ctx.quadraticCurveTo(76, this.height * 0.46, 96, this.height * 0.59);
+      ctx.arc(24, this.height * 0.78, 15.5, Math.PI * 1.05, Math.PI * 1.95, false);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(80, this.height * 0.78, 15.5, Math.PI * 1.05, Math.PI * 1.95, false);
       ctx.stroke();
 
-      // Front fender arch peak highlight
+      // 5. Warm Sunset Rim Highlights & Muscular Body Creases
+      // Upper targa deck & rear spoiler sunset peach rim
+      ctx.strokeStyle = 'rgba(254, 215, 170, 0.85)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(2, this.height * 0.40);
+      ctx.quadraticCurveTo(14, this.height * 0.39, 24, this.height * 0.37);
+      ctx.stroke();
+
+      // Muscular rear haunch shoulder line (wide-body athletic hip)
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(10, this.height * 0.44);
+      ctx.quadraticCurveTo(24, this.height * 0.38, 42, this.height * 0.44);
+      ctx.stroke();
+
+      // Main dynamic waist crease flowing forward to front fender
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
       ctx.lineWidth = 1.3;
       ctx.beginPath();
-      ctx.moveTo(68, this.height * 0.48);
-      ctx.quadraticCurveTo(80, this.height * 0.42, 92, this.height * 0.55);
+      ctx.moveTo(42, this.height * 0.44);
+      ctx.quadraticCurveTo(68, this.height * 0.46, 94, this.height * 0.58);
       ctx.stroke();
 
-      // Rear muscular haunch highlight over rear wheel
+      // Hood center power bulge crease catching warm sunset light
+      ctx.strokeStyle = 'rgba(254, 215, 170, 0.6)';
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(12, this.height * 0.45);
-      ctx.quadraticCurveTo(24, this.height * 0.39, 36, this.height * 0.46);
+      ctx.moveTo(74, this.height * 0.45);
+      ctx.quadraticCurveTo(86, this.height * 0.50, 98, this.height * 0.60);
       ctx.stroke();
 
-      // 5. Sculpted Door Cove / Side Air Channel
-      // Distinctive concave aerodynamic scallop on side doors
-      ctx.fillStyle = 'rgba(30, 4, 4, 0.45)';
+      // 6. Sculpted Door Cove / Side Air Channel
+      // Aerodynamic scallop channeling air toward the rear haunches
+      ctx.fillStyle = 'rgba(40, 5, 12, 0.5)';
       ctx.beginPath();
-      ctx.moveTo(40, this.height * 0.58);
-      ctx.quadraticCurveTo(52, this.height * 0.52, 64, this.height * 0.56);
+      ctx.moveTo(40, this.height * 0.57);
+      ctx.quadraticCurveTo(52, this.height * 0.51, 64, this.height * 0.55);
       ctx.quadraticCurveTo(58, this.height * 0.74, 42, this.height * 0.73);
       ctx.closePath();
       ctx.fill();
 
-      // Lower cove accent crease
-      ctx.strokeStyle = 'rgba(255, 100, 100, 0.4)';
+      // Lower cove accent crease with warm twilight bounce
+      ctx.strokeStyle = 'rgba(251, 146, 60, 0.45)';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(40, this.height * 0.73);
       ctx.lineTo(62, this.height * 0.73);
       ctx.stroke();
 
-      // Door shut line
-      ctx.strokeStyle = 'rgba(11, 13, 19, 0.5)';
+      // Clean door shut line
+      ctx.strokeStyle = 'rgba(10, 14, 26, 0.6)';
       ctx.lineWidth = 1.2;
       ctx.beginPath();
-      ctx.moveTo(44, this.height * 0.46);
-      ctx.lineTo(43, this.height * 0.78);
+      ctx.moveTo(44, this.height * 0.45);
+      ctx.lineTo(43, this.height * 0.77);
       ctx.stroke();
 
       // Flush minimal door handle
-      ctx.fillStyle = '#0B0D13';
-      ctx.fillRect(47, this.height * 0.51, 6, 1.5);
+      ctx.fillStyle = '#0A0E1A';
+      ctx.fillRect(47, this.height * 0.50, 6, 1.5);
 
-      // 6. Cockpit Canopy / Tinted Glass Fastback
+      // 7. Cockpit Canopy / Tinted Glass Fastback (Rear Three-Quarter Perspective)
+      // Displays the fastback rear hatch glass and side windshield with sunset reflection
       const glassGrad = ctx.createLinearGradient(35, 8, 70, 20);
-      glassGrad.addColorStop(0, '#1E293B');   // Top reflection
-      glassGrad.addColorStop(0.35, '#0F172A'); // Midnight glass
+      glassGrad.addColorStop(0, '#1E293B');   // Top sky reflection
+      glassGrad.addColorStop(0.35, '#0F172A'); // Midnight glass core
       glassGrad.addColorStop(0.8, '#030712');  // Deep obsidian tint
       glassGrad.addColorStop(1, '#020408');
 
       ctx.save();
       ctx.beginPath();
-      ctx.moveTo(27, this.height * 0.41);
-      ctx.quadraticCurveTo(36, this.height * 0.25, 46, this.height * 0.23);
-      ctx.lineTo(56, this.height * 0.24);
-      ctx.quadraticCurveTo(65, this.height * 0.34, 70, this.height * 0.44);
-      ctx.lineTo(27, this.height * 0.44);
+      ctx.moveTo(27, this.height * 0.40);
+      ctx.quadraticCurveTo(36, this.height * 0.24, 46, this.height * 0.22);
+      ctx.lineTo(56, this.height * 0.23);
+      ctx.quadraticCurveTo(65, this.height * 0.33, 70, this.height * 0.43);
+      ctx.lineTo(27, this.height * 0.43);
       ctx.closePath();
 
       ctx.fillStyle = glassGrad;
       ctx.fill();
 
-      // Thin black A-pillar and roof contour
-      ctx.strokeStyle = '#0B0D13';
+      // Crisp A-pillar, roofline, and rear glass contour outline
+      ctx.strokeStyle = '#0A0E1A';
       ctx.lineWidth = 2.0;
       ctx.stroke();
 
       // Interior headrest shadow silhouette
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
       ctx.beginPath();
-      ctx.ellipse(47, this.height * 0.33, 3.5, 4.5, 0.1, 0, Math.PI * 2);
+      ctx.ellipse(47, this.height * 0.32, 3.5, 4.5, 0.1, 0, Math.PI * 2);
       ctx.fill();
 
-      // Specular windshield glazing streak
+      // Specular windshield glazing streak (bright white)
       ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
       ctx.lineWidth = 1.6;
       ctx.beginPath();
-      ctx.moveTo(56, this.height * 0.27);
-      ctx.lineTo(66, this.height * 0.42);
+      ctx.moveTo(56, this.height * 0.26);
+      ctx.lineTo(66, this.height * 0.41);
       ctx.stroke();
 
-      // Secondary soft sky reflection glaze
-      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-      ctx.lineWidth = 1.2;
+      // Warm Indian sunset apricot sky reflection glaze
+      ctx.strokeStyle = 'rgba(253, 186, 116, 0.4)';
+      ctx.lineWidth = 1.3;
       ctx.beginPath();
-      ctx.moveTo(35, this.height * 0.35);
-      ctx.lineTo(44, this.height * 0.26);
+      ctx.moveTo(35, this.height * 0.34);
+      ctx.lineTo(45, this.height * 0.25);
       ctx.stroke();
 
       // Subtle B-pillar divider
-      ctx.strokeStyle = 'rgba(11, 13, 19, 0.8)';
+      ctx.strokeStyle = 'rgba(10, 14, 26, 0.85)';
       ctx.lineWidth = 1.4;
       ctx.beginPath();
-      ctx.moveTo(49, this.height * 0.24);
-      ctx.lineTo(48, this.height * 0.44);
+      ctx.moveTo(49, this.height * 0.23);
+      ctx.lineTo(48, this.height * 0.43);
       ctx.stroke();
       ctx.restore();
 
-      // 7. Front Headlight (Slender horizontal LED blade)
+      // 8. Front Headlight (Slender horizontal LED blade with ice-cyan brow)
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(94, this.height * 0.60);
@@ -1049,14 +1129,14 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.lineTo(93, this.height * 0.65);
       ctx.closePath();
       // Gloss black housing
-      ctx.fillStyle = '#0B0D13';
+      ctx.fillStyle = '#0A0E1A';
       ctx.fill();
       // Pure white projector lens core
       ctx.fillStyle = '#FFFFFF';
       ctx.shadowColor = '#38BDF8';
       ctx.shadowBlur = 8;
       ctx.fillRect(96, this.height * 0.63, 4, 2);
-      // Ice-cyan DRL brow
+      // Cool ice-cyan DRL brow
       ctx.strokeStyle = '#38BDF8';
       ctx.lineWidth = 1.2;
       ctx.shadowBlur = 4;
@@ -1066,22 +1146,23 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.stroke();
       ctx.restore();
 
-      // 8. Rear Taillight (Continuous slender ruby LED lightbar)
+      // 9. Rear Taillight (Continuous wrap-around ruby LED blade)
+      // Rounds the rear quarter corner in 3/4 perspective
       ctx.save();
       // Taillight dark bezel
       ctx.fillStyle = '#180306';
-      ctx.fillRect(0, this.height * 0.41, 6, 3);
+      ctx.fillRect(0, this.height * 0.40, 8, 3.5);
       // Vibrant neon ruby laser core
       ctx.fillStyle = '#FF0055';
       ctx.shadowColor = '#FF0055';
-      ctx.shadowBlur = 9;
-      ctx.fillRect(0, this.height * 0.42, 5, 2);
-      // White hot laser center
+      ctx.shadowBlur = 10;
+      ctx.fillRect(0, this.height * 0.41, 7, 2.2);
+      // White-hot laser center filament
       ctx.fillStyle = '#FFFFFF';
-      ctx.fillRect(0, this.height * 0.425, 2, 1);
+      ctx.fillRect(0, this.height * 0.415, 3.5, 1.2);
       ctx.restore();
 
-      // 9. Rear Carbon Aero Diffuser
+      // 10. Rear Carbon Aero Diffuser & Cold-Gas Thruster Nozzle Rings
       ctx.fillStyle = '#0F1218';
       ctx.beginPath();
       ctx.moveTo(0, this.height * 0.78);
@@ -1091,15 +1172,23 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.closePath();
       ctx.fill();
 
-      // Subtle twin cold-gas / plasma thruster nozzle rings on rear facia
+      // Twin cold-gas thruster nozzle rings on rear kamm-tail facia
+      // Perfectly aligned with the rear flight thruster flame origin
       ctx.fillStyle = '#1E293B';
       ctx.strokeStyle = '#0F172A';
       ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(1, this.height * 0.58, 2.5, 0, Math.PI * 2);
-      ctx.arc(1, this.height * 0.72, 2.5, 0, Math.PI * 2);
+      ctx.arc(1.5, this.height * 0.58, 2.6, 0, Math.PI * 2);
+      ctx.arc(1.5, this.height * 0.72, 2.6, 0, Math.PI * 2);
       ctx.fill();
       ctx.stroke();
+
+      // Cool cyan nozzle core glow
+      ctx.fillStyle = 'rgba(0, 243, 255, 0.45)';
+      ctx.beginPath();
+      ctx.arc(1.5, this.height * 0.58, 1.2, 0, Math.PI * 2);
+      ctx.arc(1.5, this.height * 0.72, 1.2, 0, Math.PI * 2);
+      ctx.fill();
 
       ctx.restore();
     }
@@ -1149,16 +1238,16 @@ window.DesiRoadster = window.DesiRoadster || {};
           ctx.fill();
         } else {
           // Tesla Roadster Sport Turbine Alloy Wheels
-          // 1. Low profile performance sport tire
+          // 1. Low-profile performance sport tire with dark cartoon contour
           ctx.fillStyle = '#0E1117';
-          ctx.strokeStyle = '#05070A';
+          ctx.strokeStyle = '#07090E';
           ctx.lineWidth = 1.8;
           ctx.beginPath();
           ctx.arc(0, 0, wheelRadius, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
 
-          // 2. Tread ring
+          // 2. Tread ring & outer shoulder detail
           ctx.strokeStyle = '#1E2530';
           ctx.lineWidth = 1.2;
           ctx.beginPath();
@@ -1166,7 +1255,7 @@ window.DesiRoadster = window.DesiRoadster || {};
           ctx.stroke();
 
           // 3. Ventilated ceramic brake disc behind spokes
-          ctx.fillStyle = '#475569';
+          ctx.fillStyle = '#334155';
           ctx.beginPath();
           ctx.arc(0, 0, wheelRadius - 3.8, 0, Math.PI * 2);
           ctx.fill();
@@ -1189,7 +1278,7 @@ window.DesiRoadster = window.DesiRoadster || {};
           // 6. Rotating Sport Directional Turbine Spokes
           ctx.save();
           ctx.rotate(this.wheelRotation);
-          ctx.strokeStyle = '#94A3B8';
+          ctx.strokeStyle = '#CBD5E1';
           ctx.lineWidth = 2.0;
           ctx.lineCap = 'round';
           for (let s = 0; s < 5; s++) {
@@ -1202,11 +1291,11 @@ window.DesiRoadster = window.DesiRoadster || {};
           ctx.restore();
 
           // 7. Center Aero Hubcap with dark contour
-          ctx.fillStyle = '#0B0D13';
+          ctx.fillStyle = '#0A0E1A';
           ctx.beginPath();
           ctx.arc(0, 0, 3.8, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#64748B';
+          ctx.strokeStyle = '#94A3B8';
           ctx.lineWidth = 1;
           ctx.stroke();
         }

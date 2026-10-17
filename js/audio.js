@@ -245,6 +245,149 @@ window.DesiRoadster = window.DesiRoadster || {};
       osc.start(now);
       osc.stop(now + 0.08);
     }
+
+    // --- 8. HORN OF AUTHORITY (Iconic Indian multi-tone musical pressure horn) ---
+    playHorn() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      // Classic Indian melody tones: D4, F#4, A4, D5 fanfare burst
+      const melody = [
+        { freq: 293.66, start: 0.00, dur: 0.08 },
+        { freq: 369.99, start: 0.08, dur: 0.08 },
+        { freq: 440.00, start: 0.16, dur: 0.09 },
+        { freq: 587.33, start: 0.25, dur: 0.20 }
+      ];
+
+      melody.forEach(note => {
+        const osc = this.ctx.createOscillator();
+        const oscHarmonic = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+
+        osc.type = 'sawtooth';
+        oscHarmonic.type = 'square';
+        osc.frequency.setValueAtTime(note.freq, now + note.start);
+        oscHarmonic.frequency.setValueAtTime(note.freq * 1.5, now + note.start); // Perfect fifth brass buzz
+
+        gain.gain.setValueAtTime(0.24, now + note.start);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + note.start + note.dur);
+
+        osc.connect(gain);
+        oscHarmonic.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(now + note.start);
+        oscHarmonic.start(now + note.start);
+        osc.stop(now + note.start + note.dur);
+        oscHarmonic.stop(now + note.start + note.dur);
+      });
+    }
+
+    // --- 9. POTHOLE SUSPENSION THUD SFX ---
+    playPotholeThud() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(140, now);
+      osc.frequency.exponentialRampToValueAtTime(35, now + 0.22); // Deep bottom-out thud
+
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.25);
+    }
+
+    // --- 10. ELECTRIC WIRE ZAP SFX ---
+    playZap() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(120, now);
+      osc.frequency.setValueAtTime(880, now + 0.04);
+      osc.frequency.setValueAtTime(220, now + 0.12);
+      osc.frequency.setValueAtTime(1400, now + 0.18);
+
+      gain.gain.setValueAtTime(0.28, now);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.24);
+
+      osc.connect(gain);
+      gain.connect(this.masterGain);
+
+      osc.start(now);
+      osc.stop(now + 0.24);
+    }
+
+    // --- 11. ENGINE SPUTTER SFX (Kite String Drag) ---
+    playSputter() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      for (let i = 0; i < 4; i++) {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const st = now + i * 0.05;
+
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(90 + Math.random() * 40, st);
+
+        gain.gain.setValueAtTime(0.2, st);
+        gain.gain.exponentialRampToValueAtTime(0.0001, st + 0.04);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(st);
+        osc.stop(st + 0.04);
+      }
+    }
+
+    // --- 12. WEDDING BARAAT FESTIVE DHOL SFX ---
+    playBaraat() {
+      if (this.isMuted) return;
+      this.init();
+      if (!this.ctx) return;
+
+      const now = this.ctx.currentTime;
+      // Dhol beat pattern: Dha... Dha-Tin... Ge-Ge-Na
+      [0.0, 0.12, 0.24].forEach((delay, idx) => {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        const st = now + delay;
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(idx === 1 ? 260 : 110, st);
+        osc.frequency.exponentialRampToValueAtTime(50, st + 0.1);
+
+        gain.gain.setValueAtTime(0.25, st);
+        gain.gain.exponentialRampToValueAtTime(0.0001, st + 0.11);
+
+        osc.connect(gain);
+        gain.connect(this.masterGain);
+
+        osc.start(st);
+        osc.stop(st + 0.11);
+      });
+    }
   }
 
   window.DesiRoadster.SoundController = SoundController;

@@ -80,6 +80,85 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.isGreenCNG = Math.random() > 0.4;
       this.bodyColor = this.isGreenCNG ? '#16A34A' : '#1E293B';
       this.yellowHood = '#FBBF24';
+
+      // Feature 1: Indian Traffic AI - Lane Changing with Indicator Blinkers
+      this.laneChangeTimer = 2.0 + Math.random() * 3.5;
+      this.isChangingLane = false;
+      this.targetLaneIndex = laneIndex;
+      this.indicatorBlinking = false;
+      this.indicatorTimer = 0;
+      this.indicatorDirection = 'down';
+    }
+
+    update(dt, worldSpeed, allObstacles, lanes) {
+      super.update(dt, worldSpeed);
+      this._updateLaneChangeAI(dt, allObstacles, lanes);
+    }
+
+    _updateLaneChangeAI(dt, allObstacles, lanes) {
+      if (!lanes) return;
+
+      // 1. If currently shifting lane, smoothly interpolate Y
+      if (this.isChangingLane) {
+        const targetY = lanes[this.targetLaneIndex].y - (this.height / 2);
+        const diff = targetY - this.y;
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), 80 * dt);
+        this.y += step;
+        if (Math.abs(this.y - targetY) < 1.5) {
+          this.y = targetY;
+          this.laneIndex = this.targetLaneIndex;
+          this.isChangingLane = false;
+          this.indicatorBlinking = false;
+          this.laneChangeTimer = 3.5 + Math.random() * 4.0;
+        }
+        return;
+      }
+
+      // 2. If indicator is blinking, countdown to start lane change
+      if (this.indicatorBlinking) {
+        this.indicatorTimer -= dt;
+        if (this.indicatorTimer <= 0) {
+          this.isChangingLane = true;
+        }
+        return;
+      }
+
+      // 3. Periodic AI decision to change lane
+      this.laneChangeTimer -= dt;
+      if (this.laneChangeTimer <= 0) {
+        this.laneChangeTimer = 3.0 + Math.random() * 3.5;
+
+        let candidateLane = 1;
+        if (this.laneIndex === 0) candidateLane = 1;
+        else if (this.laneIndex === 2) candidateLane = 1;
+        else candidateLane = Math.random() > 0.5 ? 0 : 2;
+
+        // Fairness check: verify candidate lane is clear nearby
+        let isSafe = true;
+        if (allObstacles) {
+          for (const obs of allObstacles) {
+            if (obs !== this && obs.laneIndex === candidateLane) {
+              if (Math.abs(obs.x - this.x) < 150) {
+                isSafe = false;
+                break;
+              }
+            }
+          }
+        }
+
+        if (isSafe) {
+          this.targetLaneIndex = candidateLane;
+          this.indicatorBlinking = true;
+          this.indicatorTimer = 0.55; // 0.55s visible warning blink before moving
+          this.indicatorDirection = candidateLane > this.laneIndex ? 'down' : 'up';
+        }
+      }
+    }
+
+    onHonked() {
+      // Swerve reaction to horn
+      this.speedMultiplier = Math.min(0.65, this.speedMultiplier + 0.12);
+      this.animTimer += 2.0;
     }
 
     render(ctx) {
@@ -217,6 +296,19 @@ window.DesiRoadster = window.DesiRoadster || {};
       ctx.lineWidth = 1;
       ctx.strokeRect(this.width - 4, 25, 3, 7);
       ctx.fillRect(this.width - 4, 25, 3, 7);
+
+      // Flashing Indian Indicator Blinker
+      if (this.indicatorBlinking && Math.floor(this.animTimer * 10) % 2 === 0) {
+        ctx.save();
+        ctx.fillStyle = '#F59E0B';
+        ctx.shadowColor = '#F59E0B';
+        ctx.shadowBlur = 8;
+        const indY = this.indicatorDirection === 'down' ? 36 : 10;
+        ctx.beginPath();
+        ctx.arc(this.width - 6, indY, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
 
       ctx.restore();
     }
@@ -371,6 +463,81 @@ window.DesiRoadster = window.DesiRoadster || {};
 
       this.roofColor = '#FBBF24'; // Classic yellow top
       this.bodyColor = '#1F2937'; // Classic black lower doors
+
+      // Feature 1: Indian Traffic AI - Taxi Lane Changing with Indicator Blinkers
+      this.laneChangeTimer = 3.5 + Math.random() * 4.0;
+      this.isChangingLane = false;
+      this.targetLaneIndex = laneIndex;
+      this.indicatorBlinking = false;
+      this.indicatorTimer = 0;
+      this.indicatorDirection = 'down';
+    }
+
+    update(dt, worldSpeed, allObstacles, lanes) {
+      super.update(dt, worldSpeed);
+      this._updateLaneChangeAI(dt, allObstacles, lanes);
+    }
+
+    _updateLaneChangeAI(dt, allObstacles, lanes) {
+      if (!lanes) return;
+
+      if (this.isChangingLane) {
+        const targetY = lanes[this.targetLaneIndex].y - (this.height / 2);
+        const diff = targetY - this.y;
+        const step = Math.sign(diff) * Math.min(Math.abs(diff), 70 * dt);
+        this.y += step;
+        if (Math.abs(this.y - targetY) < 1.5) {
+          this.y = targetY;
+          this.laneIndex = this.targetLaneIndex;
+          this.isChangingLane = false;
+          this.indicatorBlinking = false;
+          this.laneChangeTimer = 4.0 + Math.random() * 4.0;
+        }
+        return;
+      }
+
+      if (this.indicatorBlinking) {
+        this.indicatorTimer -= dt;
+        if (this.indicatorTimer <= 0) {
+          this.isChangingLane = true;
+        }
+        return;
+      }
+
+      this.laneChangeTimer -= dt;
+      if (this.laneChangeTimer <= 0) {
+        this.laneChangeTimer = 3.5 + Math.random() * 4.0;
+
+        let candidateLane = 1;
+        if (this.laneIndex === 0) candidateLane = 1;
+        else if (this.laneIndex === 2) candidateLane = 1;
+        else candidateLane = Math.random() > 0.5 ? 0 : 2;
+
+        let isSafe = true;
+        if (allObstacles) {
+          for (const obs of allObstacles) {
+            if (obs !== this && obs.laneIndex === candidateLane) {
+              if (Math.abs(obs.x - this.x) < 160) {
+                isSafe = false;
+                break;
+              }
+            }
+          }
+        }
+
+        if (isSafe) {
+          this.targetLaneIndex = candidateLane;
+          this.indicatorBlinking = true;
+          this.indicatorTimer = 0.6;
+          this.indicatorDirection = candidateLane > this.laneIndex ? 'down' : 'up';
+        }
+      }
+    }
+
+    onHonked() {
+      // Taxi accelerates slightly
+      this.speedMultiplier = Math.min(0.68, this.speedMultiplier + 0.1);
+      this.animTimer += 1.5;
     }
 
     render(ctx) {
@@ -538,6 +705,19 @@ window.DesiRoadster = window.DesiRoadster || {};
       this._renderWheel(ctx, 20, 34, 8);
       this._renderWheel(ctx, 74, 34, 8);
 
+      // Flashing Indian Indicator Blinker
+      if (this.indicatorBlinking && Math.floor(this.animTimer * 10) % 2 === 0) {
+        ctx.save();
+        ctx.fillStyle = '#F59E0B';
+        ctx.shadowColor = '#F59E0B';
+        ctx.shadowBlur = 8;
+        const indY = this.indicatorDirection === 'down' ? 32 : 12;
+        ctx.beginPath();
+        ctx.arc(this.width - 6, indY, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+
       ctx.restore();
     }
 
@@ -580,6 +760,27 @@ window.DesiRoadster = window.DesiRoadster || {};
       // Holy white or light fawn coat
       this.coatColor = Math.random() > 0.5 ? '#F8FAFC' : '#F1E9DA';
       this.spotColor = '#D4C4B5';
+
+      // Feature 1: Animal Hesitation & Right-of-Way
+      this.hesitationTimer = 2.5 + Math.random() * 3.5;
+      this.isHesitating = false;
+    }
+
+    update(dt, worldSpeed) {
+      this.animTimer += dt * 5;
+      this.hesitationTimer -= dt;
+      if (this.hesitationTimer <= 0) {
+        this.isHesitating = !this.isHesitating;
+        this.hesitationTimer = this.isHesitating ? (1.2 + Math.random() * 1.5) : (3.5 + Math.random() * 4.0);
+      }
+      const actualMultiplier = this.isHesitating ? 0.0 : this.speedMultiplier;
+      const effectiveSpeed = worldSpeed - (worldSpeed * actualMultiplier);
+      this.x -= effectiveSpeed * dt;
+    }
+
+    onHonked() {
+      // Cow twitches ears, calmly maintains right of way
+      this.animTimer += 2.5;
     }
 
     render(ctx) {
@@ -793,6 +994,27 @@ window.DesiRoadster = window.DesiRoadster || {};
 
       this.bodyColor = '#243042'; // Dark slate-charcoal hide
       this.snoutColor = '#3B485A';
+
+      // Feature 1: Buffalo Hesitation
+      this.hesitationTimer = 3.0 + Math.random() * 4.0;
+      this.isHesitating = false;
+    }
+
+    update(dt, worldSpeed) {
+      this.animTimer += dt * 5;
+      this.hesitationTimer -= dt;
+      if (this.hesitationTimer <= 0) {
+        this.isHesitating = !this.isHesitating;
+        this.hesitationTimer = this.isHesitating ? (1.5 + Math.random() * 1.5) : (4.0 + Math.random() * 4.0);
+      }
+      const actualMultiplier = this.isHesitating ? 0.0 : this.speedMultiplier;
+      const effectiveSpeed = worldSpeed - (worldSpeed * actualMultiplier);
+      this.x -= effectiveSpeed * dt;
+    }
+
+    onHonked() {
+      // Buffalo grunts, shifts slightly
+      this.animTimer += 2.0;
     }
 
     render(ctx) {
@@ -1019,30 +1241,868 @@ window.DesiRoadster = window.DesiRoadster || {};
   }
 
   // ==========================================================================
+  // AERIAL HAZARD 1: OVERHEAD ELECTRICAL WIRES (Tangled Indian Power Cables)
+  // ==========================================================================
+  class AerialWireHazard {
+    constructor(x, y) {
+      this.type = 'aerial_wires';
+      this.x = x || (Config.CANVAS_WIDTH + 80);
+      this.y = y || 165; // Wire altitude (typically 120 - 190)
+      this.width = 240;  // Span of wires across the flight corridor
+      this.height = 36;  // Sag vertical zone
+      this.speedMultiplier = 0.0; // Static in world, scrolls with full worldSpeed
+      this.animTimer = Math.random() * Math.PI * 2;
+
+      this.hasCollided = false;
+      this.hasNearMissed = false;
+
+      // Pole structure anchor (rooted at roadside ground)
+      this.poleWidth = 14;
+      this.poleHeight = Config.ROAD_TOP_Y - this.y;
+
+      // Sag depth of the electrical cables in pixels
+      this.sag = 14;
+    }
+
+    update(dt, worldSpeed) {
+      this.animTimer += dt * 3;
+      this.x -= worldSpeed * dt;
+    }
+
+    isOffscreen() {
+      return (this.x + this.width) < -150;
+    }
+
+    /**
+     * Hitbox: The electrical cables form a horizontal corridor with slight vertical sag.
+     * The pole on the left also has a physical post collision.
+     */
+    checkCollision(player) {
+      if (!player || player.isDead) return false;
+      // Completely immune if grounded or driving on road
+      if (player.mode === 'ROAD' && player.isGrounded) return false;
+
+      const pHitbox = player.getHitbox ? player.getHitbox() : {
+        x: player.x + 4,
+        y: player.y + 4,
+        width: player.width - 8,
+        height: player.height - 8
+      };
+
+      // 1. Check Wire Span Corridor (X: this.x to this.x + this.width, Y: this.y - 6 to this.y + this.sag + 4)
+      const wireLeft = this.x;
+      const wireRight = this.x + this.width;
+      const wireTop = this.y - 6;
+      const wireBottom = this.y + this.sag + 4;
+
+      const wireOverlap = (
+        pHitbox.x < wireRight &&
+        pHitbox.x + pHitbox.width > wireLeft &&
+        pHitbox.y < wireBottom &&
+        pHitbox.y + pHitbox.height > wireTop
+      );
+
+      // 2. Check Pole Collision (X: this.x - 4 to this.x + 10, Y: this.y - 14 to Config.ROAD_TOP_Y)
+      const poleLeft = this.x - 4;
+      const poleRight = this.x + 10;
+      const poleTop = this.y - 14;
+      const poleBottom = Config.ROAD_TOP_Y;
+
+      const poleOverlap = (
+        pHitbox.x < poleRight &&
+        pHitbox.x + pHitbox.width > poleLeft &&
+        pHitbox.y < poleBottom &&
+        pHitbox.y + pHitbox.height > poleTop
+      );
+
+      return wireOverlap || poleOverlap;
+    }
+
+    checkNearMiss(player) {
+      if (!player || player.isDead || this.hasCollided || this.hasNearMissed) return false;
+      if (player.mode === 'ROAD' && player.isGrounded) return false;
+
+      const pHitbox = player.getHitbox ? player.getHitbox() : {
+        x: player.x + 4,
+        y: player.y + 4,
+        width: player.width - 8,
+        height: player.height - 8
+      };
+
+      // Near miss triggers as player clears the middle of the wire span
+      const midWireX = this.x + this.width * 0.5;
+      const isPastCenter = (pHitbox.x > midWireX) && (pHitbox.x < this.x + this.width + 50);
+      if (!isPastCenter) return false;
+
+      const playerCenterY = pHitbox.y + pHitbox.height * 0.5;
+      const wireCenterY = this.y + this.sag * 0.5;
+      const vertDist = Math.abs(playerCenterY - wireCenterY);
+
+      // Narrow fly-over or fly-under clearance
+      return vertDist >= 22 && vertDist <= 68;
+    }
+
+    render(ctx) {
+      ctx.save();
+
+      const breeze = Math.sin(this.animTimer) * 1.5;
+      const sagY = this.y + this.sag + breeze;
+      const midX = this.x + this.width * 0.5;
+      const rightX = this.x + this.width;
+
+      // 1. Roadside Concrete Utility Pole (Left anchor)
+      const groundY = Config.ROAD_TOP_Y;
+      ctx.fillStyle = '#334155';
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.0;
+
+      // Main vertical pole
+      ctx.fillRect(this.x - 4, this.y - 14, 8, groundY - (this.y - 14));
+      ctx.strokeRect(this.x - 4, this.y - 14, 8, groundY - (this.y - 14));
+
+      // Dual Crossarms
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(this.x - 14, this.y - 12, 28, 5);
+      ctx.strokeRect(this.x - 14, this.y - 12, 28, 5);
+
+      ctx.fillRect(this.x - 10, this.y + 2, 20, 4);
+      ctx.strokeRect(this.x - 10, this.y + 2, 20, 4);
+
+      // Ceramic Cup Insulators
+      ctx.fillStyle = '#E2E8F0';
+      [-12, -4, 4, 12].forEach(ox => {
+        ctx.fillRect(this.x + ox - 2, this.y - 17, 4, 5);
+        ctx.strokeRect(this.x + ox - 2, this.y - 17, 4, 5);
+      });
+
+      // 2. High-Voltage Warning Danger Plaque on Pole
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillRect(this.x - 8, this.y + 16, 16, 10);
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(this.x - 8, this.y + 16, 16, 10);
+      ctx.fillStyle = '#0F172A';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('440V', this.x, this.y + 24);
+
+      // 3. Hanging Catenary Electrical Wires (3 chaotic lines)
+      const wireOffsets = [-10, -2, 6];
+      wireOffsets.forEach((wo, idx) => {
+        const wireSag = sagY + wo;
+        const startY = this.y + wo * 0.6;
+        const endY = this.y + wo * 0.6 + (idx === 1 ? 4 : 0);
+
+        // Dark navy cartoon outer stroke for crisp sunset contrast
+        ctx.strokeStyle = '#0F172A';
+        ctx.lineWidth = 3.2;
+        ctx.beginPath();
+        ctx.moveTo(this.x, startY);
+        ctx.quadraticCurveTo(midX, wireSag + 1, rightX, endY);
+        ctx.stroke();
+
+        // Core wire line
+        ctx.strokeStyle = idx === 1 ? '#1E293B' : '#334155';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(this.x, startY);
+        ctx.quadraticCurveTo(midX, wireSag, rightX, endY);
+        ctx.stroke();
+
+        // Warning Aerial Marker Spheres (Indian aviation/highway marker beads)
+        const beadX = this.x + this.width * (0.35 + idx * 0.25);
+        const beadT = (beadX - this.x) / this.width;
+        const beadY = (1 - beadT) * (1 - beadT) * startY + 2 * (1 - beadT) * beadT * wireSag + beadT * beadT * endY;
+
+        ctx.fillStyle = idx === 1 ? '#EF4444' : '#F59E0B'; // Vivid red / amber marker beads
+        ctx.beginPath();
+        ctx.arc(beadX, beadY, 4.2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#0F172A';
+        ctx.lineWidth = 1.4;
+        ctx.stroke();
+
+        // Specular bead highlight
+        ctx.fillStyle = '#FFFFFF';
+        ctx.beginPath();
+        ctx.arc(beadX - 1.2, beadY - 1.2, 1.2, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // 4. Subtle Electric Ion Sparkle (occasional live-wire crackle)
+      if (Math.sin(this.animTimer * 12) > 0.85) {
+        ctx.fillStyle = '#00F3FF';
+        ctx.shadowColor = '#00F3FF';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(midX + Math.sin(this.animTimer * 8) * 30, sagY, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // ==========================================================================
+  // AERIAL HAZARD 2: FIGHTER-KITE STRING (Manja / Patang Hazard)
+  // ==========================================================================
+  class KiteStringHazard {
+    constructor(x, y) {
+      this.type = 'kite_string';
+      this.x = x || (Config.CANVAS_WIDTH + 80);
+      this.y = y || 140; // Altitude of the kite
+      this.width = 130;  // Horizontal span of the string corridor
+      this.height = 110; // Vertical span of the string corridor
+      this.speedMultiplier = 0.12; // Kites drift slowly against wind
+      this.animTimer = Math.random() * Math.PI * 2;
+
+      this.hasCollided = false;
+      this.hasNearMissed = false;
+
+      // Color scheme for the Indian fighter kite (patang)
+      const schemes = [
+        { primary: '#FF007F', secondary: '#FF9933' }, // Pink & Saffron
+        { primary: '#00F3FF', secondary: '#39FF14' }, // Cyan & Neon Green
+        { primary: '#FFC83B', secondary: '#EF4444' }  // Sun Yellow & Crimson
+      ];
+      this.scheme = schemes[Math.floor(Math.random() * schemes.length)];
+      this.kiteSize = 18;
+    }
+
+    update(dt, worldSpeed) {
+      this.animTimer += dt * 4;
+      // Moves left with world speed minus subtle kite drift
+      const effectiveSpeed = worldSpeed - (worldSpeed * this.speedMultiplier);
+      this.x -= effectiveSpeed * dt;
+    }
+
+    isOffscreen() {
+      return (this.x + this.width) < -150;
+    }
+
+    /**
+     * Hitbox: Tests intersection with the taut diagonal kite string running
+     * from top kite (x + 35, y - 25) down-right to (x + 115, y + 65).
+     */
+    checkCollision(player) {
+      if (!player || player.isDead) return false;
+      // Road driving is completely immune
+      if (player.mode === 'ROAD' && player.isGrounded) return false;
+
+      const pHitbox = player.getHitbox ? player.getHitbox() : {
+        x: player.x + 4,
+        y: player.y + 4,
+        width: player.width - 8,
+        height: player.height - 8
+      };
+
+      // String line endpoints in world coordinates
+      const x1 = this.x + 35;
+      const y1 = this.y - 25 + Math.sin(this.animTimer * 2) * 3;
+      const x2 = this.x + 115;
+      const y2 = this.y + 65;
+
+      const pCenterX = pHitbox.x + pHitbox.width * 0.5;
+
+      // Check if player's X overlaps the string horizontal range with margin
+      if (pHitbox.x + pHitbox.width < x1 - 10 || pHitbox.x > x2 + 10) return false;
+
+      // Calculate string Y at player's center X
+      const t = Math.max(0, Math.min(1, (pCenterX - x1) / (x2 - x1)));
+      const stringY = y1 + t * (y2 - y1);
+
+      // Collision if player hitbox envelops or crosses the string Y within tolerance
+      const isYOverlap = (pHitbox.y < stringY + 8) && (pHitbox.y + pHitbox.height > stringY - 8);
+      return isYOverlap;
+    }
+
+    checkNearMiss(player) {
+      if (!player || player.isDead || this.hasCollided || this.hasNearMissed) return false;
+      if (player.mode === 'ROAD' && player.isGrounded) return false;
+
+      const pHitbox = player.getHitbox ? player.getHitbox() : {
+        x: player.x + 4,
+        y: player.y + 4,
+        width: player.width - 8,
+        height: player.height - 8
+      };
+
+      const x1 = this.x + 35;
+      const x2 = this.x + 115;
+      const y1 = this.y - 25;
+      const y2 = this.y + 65;
+
+      const pCenterX = pHitbox.x + pHitbox.width * 0.5;
+      const isPastCenter = (pCenterX > (x1 + x2) * 0.45) && (pCenterX < x2 + 45);
+      if (!isPastCenter) return false;
+
+      const t = Math.max(0, Math.min(1, (pCenterX - x1) / (x2 - x1)));
+      const stringY = y1 + t * (y2 - y1);
+      const pCenterY = pHitbox.y + pHitbox.height * 0.5;
+      const vertDist = Math.abs(pCenterY - stringY);
+
+      return vertDist >= 20 && vertDist <= 65;
+    }
+
+    render(ctx) {
+      ctx.save();
+
+      // Fluttering kite motion
+      const flutter = Math.sin(this.animTimer * 3.5) * 4;
+      const kiteX = this.x + 35;
+      const kiteY = this.y - 25 + flutter;
+
+      // Anchor string runs diagonally downward to lower-right
+      const anchorX = this.x + 115;
+      const anchorY = this.y + 65;
+
+      // 1. Taut Glass-Coated Manja String (with dark outline for sunset readability)
+      // Dark under-stroke
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.4;
+      ctx.beginPath();
+      ctx.moveTo(kiteX, kiteY);
+      ctx.lineTo(anchorX, anchorY);
+      ctx.stroke();
+
+      // Shimmering glass-coated core (White / Ice-cyan reflection)
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(kiteX, kiteY);
+      ctx.lineTo(anchorX, anchorY);
+      ctx.stroke();
+
+      // 2. Fluttering Paper Warning Ribbons on the String
+      const ribbonPositions = [0.3, 0.65];
+      ribbonPositions.forEach((rp, idx) => {
+        const rx = kiteX + (anchorX - kiteX) * rp;
+        const ry = kiteY + (anchorY - kiteY) * rp;
+        const ribbonWave = Math.sin(this.animTimer * 5 + idx * 2) * 5;
+
+        ctx.fillStyle = idx === 0 ? '#FF0055' : '#FF9933';
+        ctx.beginPath();
+        ctx.moveTo(rx, ry);
+        ctx.quadraticCurveTo(rx - 6, ry + ribbonWave, rx - 10, ry + ribbonWave * 1.5);
+        ctx.lineTo(rx - 8, ry + ribbonWave * 1.5 + 3);
+        ctx.lineTo(rx, ry + 2);
+        ctx.closePath();
+        ctx.fill();
+        ctx.strokeStyle = '#0F172A';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      });
+
+      // 3. Indian Fighter Kite (Patang) at the apex
+      ctx.save();
+      ctx.translate(kiteX, kiteY);
+      ctx.rotate(Math.sin(this.animTimer * 2.5) * 0.12);
+
+      const s = this.kiteSize;
+
+      // Diamond Body Upper Half (Primary Color)
+      ctx.fillStyle = this.scheme.primary;
+      ctx.beginPath();
+      ctx.moveTo(0, -s);
+      ctx.lineTo(s, 0);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(-s, 0);
+      ctx.closePath();
+      ctx.fill();
+
+      // Diamond Body Lower Half (Secondary Color)
+      ctx.fillStyle = this.scheme.secondary;
+      ctx.beginPath();
+      ctx.moveTo(-s, 0);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(s, 0);
+      ctx.lineTo(0, s * 1.15);
+      ctx.closePath();
+      ctx.fill();
+
+      // Dark Precision Cartoon Outline
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(0, -s);
+      ctx.lineTo(s, 0);
+      ctx.lineTo(0, s * 1.15);
+      ctx.lineTo(-s, 0);
+      ctx.closePath();
+      ctx.stroke();
+
+      // Curved Bamboo Spine (Thattha) & Cross-Bow Spar
+      ctx.strokeStyle = '#FDE68A';
+      ctx.lineWidth = 1.4;
+      // Vertical central spine
+      ctx.beginPath();
+      ctx.moveTo(0, -s);
+      ctx.lineTo(0, s * 1.15);
+      ctx.stroke();
+
+      // Bow cross-spar
+      ctx.beginPath();
+      ctx.moveTo(-s, 0);
+      ctx.quadraticCurveTo(0, -s * 0.45, s, 0);
+      ctx.stroke();
+
+      // Triangular Paper Tail
+      ctx.fillStyle = this.scheme.primary;
+      ctx.beginPath();
+      ctx.moveTo(-s * 0.35, s * 1.15);
+      ctx.lineTo(s * 0.35, s * 1.15);
+      ctx.lineTo(0, s * 1.7);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.restore();
+
+      ctx.restore();
+    }
+  }
+
+  // ==========================================================================
+  // DESI TRUCK (Classic Indian Tata 1613 Highway Cargo Truck with "HORN OK PLEASE")
+  // ==========================================================================
+  class DesiTruck extends Obstacle {
+    constructor(laneIndex, x) {
+      super(laneIndex, x);
+      this.type = 'truck';
+      this.width = 122;
+      this.height = 54;
+      this.speedMultiplier = 0.30; // Heavy, steady highway cruiser
+      this.hitboxInset = { top: 6, bottom: 2, left: 8, right: 8 };
+
+      const colors = ['#EAB308', '#2563EB', '#16A34A', '#DC2626'];
+      this.truckColor = colors[Math.floor(Math.random() * colors.length)];
+      this.cargoColor = '#B45309';
+    }
+
+    onHonked() {
+      // Truck stays its course, slight engine rumble
+      this.animTimer += 1.0;
+    }
+
+    render(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+
+      const vib = Math.sin(this.animTimer * 16) * 0.7;
+      ctx.translate(0, vib);
+
+      // 1. Ground Shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.beginPath();
+      ctx.ellipse(this.width * 0.5, this.height * 0.94, this.width * 0.48, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Wooden Cargo Carrier Body (Rear & Center)
+      ctx.fillStyle = this.cargoColor;
+      ctx.fillRect(28, 8, this.width - 32, 34);
+
+      // Dark cartoon outline on cargo bed
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.4;
+      ctx.strokeRect(28, 8, this.width - 32, 34);
+
+      // Wooden planks horizontal dividers
+      ctx.strokeStyle = '#78350F';
+      ctx.lineWidth = 1.5;
+      [16, 24, 32].forEach(py => {
+        ctx.beginPath();
+        ctx.moveTo(28, py);
+        ctx.lineTo(this.width - 4, py);
+        ctx.stroke();
+      });
+
+      // Hand-painted "HORN OK PLEASE" script on tailgate
+      ctx.fillStyle = '#FEF08A';
+      ctx.font = '900 8.5px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.6;
+      ctx.strokeText('HORN  OK  PLEASE', 72, 28);
+      ctx.fillText('HORN  OK  PLEASE', 72, 28);
+
+      // Festive Marigold / Lotus decorative crown banner along top cargo rail
+      for (let bx = 32; bx < this.width - 10; bx += 14) {
+        ctx.fillStyle = '#F59E0B';
+        ctx.beginPath();
+        ctx.arc(bx, 8, 3.5, 0, Math.PI);
+        ctx.fill();
+      }
+
+      // 3. Heavy Front Truck Cab (Tata rounded bonnet & windshield)
+      ctx.fillStyle = this.truckColor;
+      ctx.beginPath();
+      ctx.moveTo(4, 26);
+      ctx.lineTo(16, 12);
+      ctx.lineTo(34, 12);
+      ctx.lineTo(34, 42);
+      ctx.lineTo(4, 42);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.4;
+      ctx.stroke();
+
+      // Cab Sun-Visor with garland
+      ctx.fillStyle = '#0F172A';
+      ctx.fillRect(14, 10, 20, 3.5);
+
+      // Windshield with light blue glare
+      ctx.fillStyle = '#67E8F9';
+      ctx.beginPath();
+      ctx.moveTo(17, 14);
+      ctx.lineTo(32, 14);
+      ctx.lineTo(32, 24);
+      ctx.lineTo(13, 24);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.4;
+      ctx.stroke();
+
+      // Front Chrome Grille with Horizontal slats
+      ctx.fillStyle = '#CBD5E1';
+      ctx.fillRect(4, 28, 6, 12);
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(4, 28, 6, 12);
+
+      // Round Projector Headlight
+      ctx.fillStyle = '#FEF08A';
+      ctx.beginPath();
+      ctx.arc(3, 34, 3, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      // 4. Swinging Nazar Battu (Black pom-pom charm under rear bumper)
+      const sway = Math.sin(this.animTimer * 8) * 4;
+      ctx.strokeStyle = '#1E293B';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(this.width - 10, 42);
+      ctx.lineTo(this.width - 10 + sway, 48);
+      ctx.stroke();
+      ctx.fillStyle = '#0F172A';
+      ctx.beginPath();
+      ctx.arc(this.width - 10 + sway, 49, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 5. Heavy Dual Wheels & Hubs
+      this._renderTruckWheel(ctx, 18, 44, 7.5);
+      this._renderTruckWheel(ctx, 80, 44, 7.5);
+      this._renderTruckWheel(ctx, 102, 44, 7.5);
+
+      ctx.restore();
+    }
+
+    _renderTruckWheel(ctx, wx, wy, radius) {
+      ctx.fillStyle = '#0F172A';
+      ctx.beginPath();
+      ctx.arc(wx, wy, radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#05070B';
+      ctx.lineWidth = 1.8;
+      ctx.stroke();
+
+      ctx.fillStyle = '#64748B';
+      ctx.beginPath();
+      ctx.arc(wx, wy, radius - 3, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#0F172A';
+      ctx.beginPath();
+      ctx.arc(wx, wy, 2.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // ==========================================================================
+  // POTHOLE OBSTACLE (Indian Road Condition Hazard: Standard & Launch Craters)
+  // ==========================================================================
+  class PotholeObstacle extends Obstacle {
+    constructor(laneIndex, x, potholeType = 'standard') {
+      super(laneIndex, x);
+      this.type = 'pothole';
+      this.potholeType = potholeType; // 'standard' or 'large'
+      this.speedMultiplier = 0.0; // Stationary road defect
+      this.width = potholeType === 'large' ? 82 : 58;
+      this.height = potholeType === 'large' ? 22 : 16;
+      this.hitboxInset = { top: 2, bottom: 2, left: 8, right: 8 };
+      this.hasTriggered = false;
+    }
+
+    checkCollision(player) {
+      if (!player || player.isDead || this.hasTriggered) return false;
+      if (player.mode !== 'ROAD') return false;
+      if (!player.isGrounded && player.y < (player.targetLaneY - 14)) return false;
+
+      const pHitbox = player.getHitbox ? player.getHitbox() : {
+        x: player.x + 8,
+        y: player.y + 6,
+        width: player.width - 16,
+        height: player.height - 12
+      };
+      const oHitbox = this.getHitbox();
+
+      return (
+        pHitbox.x < oHitbox.x + oHitbox.width &&
+        pHitbox.x + pHitbox.width > oHitbox.x &&
+        pHitbox.y < oHitbox.y + oHitbox.height &&
+        pHitbox.y + pHitbox.height > oHitbox.y
+      );
+    }
+
+    render(ctx) {
+      ctx.save();
+      ctx.translate(this.x, this.y);
+
+      const isLarge = this.potholeType === 'large';
+      const w = this.width;
+      const h = this.height;
+
+      // 1. Fractured Asphalt Outer Rim (Dark Jagged Contour)
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.4;
+      ctx.fillStyle = '#111827';
+      ctx.beginPath();
+      ctx.ellipse(w * 0.5, h * 0.5, w * 0.48, h * 0.46, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+
+      // 2. Deep Crater Interior (Obsidian Pit with Depth Shadow)
+      const craterGrad = ctx.createRadialGradient(w * 0.5, h * 0.45, 2, w * 0.5, h * 0.5, w * 0.46);
+      craterGrad.addColorStop(0, '#030712');
+      craterGrad.addColorStop(0.7, '#0F172A');
+      craterGrad.addColorStop(1, '#1F2937');
+      ctx.fillStyle = craterGrad;
+      ctx.beginPath();
+      ctx.ellipse(w * 0.5, h * 0.52, w * 0.42, h * 0.38, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 3. Muddy Rain Puddle Reflection (Reflecting warm sunset sky)
+      ctx.fillStyle = 'rgba(251, 146, 60, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(w * 0.48, h * 0.55, w * 0.28, h * 0.22, -0.05, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(w * 0.44, h * 0.54, w * 0.16, 0.4, 2.2);
+      ctx.stroke();
+
+      // 4. Loose Asphalt Rubble & Cracks
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(w * 0.12, h * 0.2, 3, 2.5);
+      ctx.fillRect(w * 0.82, h * 0.65, 3.5, 3);
+      ctx.fillRect(w * 0.72, h * 0.15, 2.5, 2);
+
+      if (isLarge) {
+        ctx.fillStyle = '#EF4444';
+        ctx.fillRect(w * 0.05, h * 0.35, 4, 3);
+        ctx.fillStyle = '#F59E0B';
+        ctx.fillRect(w * 0.9, h * 0.4, 4, 3);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // ==========================================================================
+  // AERIAL HAZARD 3: LOW FLYOVER / OVERHEAD EXPRESSWAY STRUCTURE
+  // ==========================================================================
+  class LowFlyoverHazard {
+    constructor(x, y) {
+      this.type = 'flyover';
+      this.x = x || (Config.CANVAS_WIDTH + 80);
+      this.y = y || 135; // Altitude of the bridge deck
+      this.width = 180;  // Span of the flyover section
+      this.height = 140; // Total height including clearance corridor
+      this.deckThickness = 34; // Solid concrete deck collision height
+      this.speedMultiplier = 0.0; // Stationary world structure
+      this.hasCollided = false;
+      this.hasNearMissed = false;
+      this.animTimer = 0;
+    }
+
+    update(dt, worldSpeed) {
+      this.animTimer += dt;
+      this.x -= worldSpeed * dt;
+    }
+
+    isOffscreen() {
+      return (this.x + this.width) < -150;
+    }
+
+    checkCollision(player) {
+      if (!player || player.isDead) return false;
+      if (player.mode === 'ROAD' && player.isGrounded) return false;
+
+      const pHitbox = player.getHitbox ? player.getHitbox() : {
+        x: player.x + 4,
+        y: player.y + 4,
+        width: player.width - 8,
+        height: player.height - 8
+      };
+
+      if (pHitbox.x + pHitbox.width < this.x + 10 || pHitbox.x > this.x + this.width - 10) {
+        return false;
+      }
+
+      const deckTop = this.y;
+      const deckBottom = this.y + this.deckThickness;
+
+      return (pHitbox.y < deckBottom) && (pHitbox.y + pHitbox.height > deckTop);
+    }
+
+    checkNearMiss(player) {
+      if (!player || player.isDead || this.hasCollided || this.hasNearMissed) return false;
+      if (player.mode === 'ROAD' && player.isGrounded) return false;
+
+      const pHitbox = player.getHitbox ? player.getHitbox() : {
+        x: player.x + 4,
+        y: player.y + 4,
+        width: player.width - 8,
+        height: player.height - 8
+      };
+
+      const isPastCenter = (pHitbox.x > this.x + this.width * 0.4) && (pHitbox.x < this.x + this.width + 50);
+      if (!isPastCenter) return false;
+
+      const pCenterY = pHitbox.y + pHitbox.height * 0.5;
+      const deckCenterY = this.y + this.deckThickness * 0.5;
+      const vertDist = Math.abs(pCenterY - deckCenterY);
+
+      return vertDist >= 32 && vertDist <= 72;
+    }
+
+    render(ctx) {
+      ctx.save();
+
+      const dx = this.x;
+      const dy = this.y;
+      const w = this.width;
+      const th = this.deckThickness;
+
+      // 1. Concrete Support Pillars descending toward roadside
+      ctx.fillStyle = '#64748B';
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.2;
+
+      ctx.fillRect(dx + 18, dy + th, 16, 120);
+      ctx.strokeRect(dx + 18, dy + th, 16, 120);
+      ctx.fillRect(dx + w - 34, dy + th, 16, 120);
+      ctx.strokeRect(dx + w - 34, dy + th, 16, 120);
+
+      // Pillar crash barriers
+      for (let by = dy + th + 40; by < dy + th + 100; by += 16) {
+        ctx.fillStyle = '#EF4444';
+        ctx.fillRect(dx + 18, by, 16, 8);
+        ctx.fillRect(dx + w - 34, by, 16, 8);
+      }
+
+      // 2. Concrete Flyover Bridge Deck
+      const deckGrad = ctx.createLinearGradient(dx, dy, dx, dy + th);
+      deckGrad.addColorStop(0, '#94A3B8');
+      deckGrad.addColorStop(0.5, '#64748B');
+      deckGrad.addColorStop(1, '#475569');
+
+      ctx.fillStyle = deckGrad;
+      ctx.fillRect(dx, dy, w, th);
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.6;
+      ctx.strokeRect(dx, dy, w, th);
+
+      // 3. Underside Caution Hazard Stripes
+      const stripeH = 8;
+      const stripeY = dy + th - stripeH;
+      ctx.fillStyle = '#F59E0B';
+      ctx.fillRect(dx, stripeY, w, stripeH);
+
+      ctx.fillStyle = '#0F172A';
+      for (let sx = dx; sx < dx + w; sx += 18) {
+        ctx.beginPath();
+        ctx.moveTo(sx, stripeY);
+        ctx.lineTo(sx + 9, stripeY);
+        ctx.lineTo(sx + 3, stripeY + stripeH);
+        ctx.lineTo(sx - 6, stripeY + stripeH);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // 4. Overhead NHAI Expressway Signboard
+      const signW = 100;
+      const signH = 22;
+      const signX = dx + (w - signW) * 0.5;
+      const signY = dy - signH - 4;
+
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(signX + 15, dy - 6, 4, 6);
+      ctx.fillRect(signX + signW - 19, dy - 6, 4, 6);
+
+      ctx.fillStyle = '#15803D';
+      ctx.fillRect(signX, signY, signW, signH);
+      ctx.strokeStyle = '#FFFFFF';
+      ctx.lineWidth = 1.4;
+      ctx.strokeRect(signX + 2, signY + 2, signW - 4, signH - 4);
+      ctx.strokeStyle = '#0F172A';
+      ctx.lineWidth = 2.0;
+      ctx.strokeRect(signX, signY, signW, signH);
+
+      ctx.fillStyle = '#FFFFFF';
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('NH-48 EXPRESSWAY', signX + signW * 0.5, signY + 10);
+      ctx.fillStyle = '#FEF08A';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.fillText('CLEARANCE 4.5M ▼', signX + signW * 0.5, signY + 18);
+
+      // 5. Metal Bridge Guardrail along top
+      ctx.strokeStyle = '#CBD5E1';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(dx, dy - 3);
+      ctx.lineTo(dx + w, dy - 3);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+  }
+
+  // ==========================================================================
   // OBSTACLE MANAGER & FAIR SPAWNING SYSTEM
   // ==========================================================================
   class ObstacleManager {
     constructor() {
       this.obstacles = [];
       this.coins = [];
+      this.potholes = [];
+      this.aerialHazards = [];
 
-      // Road lane center coordinates (3 distinct lanes across asphalt)
       this.lanes = [
         { y: 345, name: 'TOP_LANE' },
         { y: 405, name: 'MID_LANE' },
         { y: 460, name: 'BOT_LANE' }
       ];
 
-      // Spawning timers & fairness constraints
       this.spawnTimer = 0;
       this.coinSpawnTimer = 0;
-      this.minSpawnInterval = 1.35; // Dynamically scales with distance
+      this.potholeSpawnTimer = 0;
+      this.potholeInterval = 3.5 + Math.random() * 2.5;
+      this.minSpawnInterval = 1.35;
       this.currentInterval = 2.0;
 
-      // Track recent lane occupancy to guarantee NEVER blocking all 3 lanes simultaneously
-      this.recentLaneHistory = [];
+      this.aerialSpawnTimer = 0;
+      this.aerialInterval = (Config.AERIAL_HAZARD_MIN_INTERVAL || 6.5) + Math.random() * 2.5;
 
-      // Visual feedback / collision particles
       this.impactParticles = [];
       this.floatingTexts = [];
     }
@@ -1050,21 +2110,20 @@ window.DesiRoadster = window.DesiRoadster || {};
     reset() {
       this.obstacles = [];
       this.coins = [];
+      this.potholes = [];
+      this.aerialHazards = [];
       this.spawnTimer = 0;
       this.coinSpawnTimer = 0;
-      this.recentLaneHistory = [];
+      this.potholeSpawnTimer = 0;
+      this.potholeInterval = 3.5 + Math.random() * 2.5;
+      this.aerialSpawnTimer = 0;
+      this.aerialInterval = (Config.AERIAL_HAZARD_MIN_INTERVAL || 6.5) + Math.random() * 2.5;
       this.impactParticles = [];
       this.floatingTexts = [];
     }
 
-    /**
-     * Spawns an obstacle in a guaranteed fair manner
-     */
     _spawnObstacle(worldSpeed) {
-      // 1. Pick candidate lane ensuring AT LEAST ONE lane remains open
       const availableLanes = [0, 1, 2];
-
-      // Check which lanes currently have obstacles near the right screen entry (x > 700)
       const busyLanes = new Set();
       this.obstacles.forEach(obs => {
         if (obs.x > Config.CANVAS_WIDTH - 240) {
@@ -1072,46 +2131,44 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       });
 
-      // Filter available lanes that are not currently occupied near the spawn zone
       let selectableLanes = availableLanes.filter(l => !busyLanes.has(l));
-
-      // CRITICAL FAIRNESS: If 2 lanes are already busy, selectableLanes will only have 1 lane.
-      // If all 3 are somehow busy, abort spawn until lane clears.
       if (selectableLanes.length === 0) return;
 
       const chosenLane = selectableLanes[Math.floor(Math.random() * selectableLanes.length)];
-
-      // 2. Randomly select obstacle type with realistic Indian highway weights
       const rand = Math.random();
       let obstacle;
       const spawnX = Config.CANVAS_WIDTH + 50 + Math.random() * 40;
 
-      if (rand < 0.32) {
-        // Auto-rickshaw (frequent)
+      if (rand < 0.26) {
         obstacle = new AutoRickshaw(chosenLane, spawnX);
-      } else if (rand < 0.58) {
-        // Scooter (quick)
+      } else if (rand < 0.46) {
         obstacle = new Scooter(chosenLane, spawnX);
-      } else if (rand < 0.78) {
-        // Ambassador Taxi
+      } else if (rand < 0.64) {
         obstacle = new TaxiCar(chosenLane, spawnX);
+      } else if (rand < 0.78) {
+        obstacle = new DesiTruck(chosenLane, spawnX);
       } else if (rand < 0.90) {
-        // Holy Zebu Cow
         obstacle = new DesiCow(chosenLane, spawnX);
       } else {
-        // Charcoal Water Buffalo
         obstacle = new DesiBuffalo(chosenLane, spawnX);
       }
 
-      // Center obstacle vertically in its designated lane
       obstacle.y = this.lanes[chosenLane].y - (obstacle.height / 2);
-
       this.obstacles.push(obstacle);
     }
 
-    /**
-     * Spawns a series of collectible gold coins along a lane or aerial arc
-     */
+    _spawnPothole() {
+      const lane = Math.floor(Math.random() * 3);
+      const hasRecent = this.potholes.some(p => p.laneIndex === lane && p.x > Config.CANVAS_WIDTH - 200);
+      if (hasRecent) return;
+
+      const spawnX = Config.CANVAS_WIDTH + 60;
+      const type = Math.random() > 0.45 ? 'large' : 'standard';
+      const pothole = new PotholeObstacle(lane, spawnX, type);
+      pothole.y = this.lanes[lane].y + 4;
+      this.potholes.push(pothole);
+    }
+
     _spawnCoins(player) {
       const isAir = Math.random() > 0.45;
       const count = 3 + Math.floor(Math.random() * 3);
@@ -1120,7 +2177,7 @@ window.DesiRoadster = window.DesiRoadster || {};
 
       let startY;
       if (isAir) {
-        startY = 120 + Math.random() * 140; // Airborne coins
+        startY = 120 + Math.random() * 140;
       } else {
         const lane = Math.floor(Math.random() * 3);
         startY = this.lanes[lane].y;
@@ -1131,11 +2188,52 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
     }
 
+    _spawnAerialHazard(worldSpeed, player) {
+      if (player && (player.state === 'TRANSFORM_TO_FLIGHT' || player.transformProgress < 0.6)) return;
+
+      const hasRecentAerial = this.aerialHazards.some(h => h.x > Config.CANVAS_WIDTH - 240);
+      if (hasRecentAerial) return;
+
+      const spawnX = Config.CANVAS_WIDTH + 80;
+      const rand = Math.random();
+
+      if (rand < 0.38) {
+        const alt = Math.random() > 0.5 ? 125 : 175;
+        this.aerialHazards.push(new AerialWireHazard(spawnX, alt));
+      } else if (rand < 0.72) {
+        const alt = 115 + Math.random() * 50;
+        this.aerialHazards.push(new KiteStringHazard(spawnX, alt));
+      } else {
+        this.aerialHazards.push(new LowFlyoverHazard(spawnX, 130));
+      }
+    }
+
+    scareTrafficWithHorn(player) {
+      if (!player) return;
+      this.obstacles.forEach(obs => {
+        const dist = Math.abs(obs.x - player.x);
+        if (dist < 320 && obs.x > player.x - 40) {
+          if (obs.onHonked) {
+            obs.onHonked();
+          }
+        }
+      });
+
+      this.floatingTexts.push({
+        text: '📯 HORN HONKED!',
+        x: player.x + 50,
+        y: player.y - 25,
+        vy: -35,
+        color: '#F59E0B',
+        life: 0.65,
+        maxLife: 0.65
+      });
+    }
+
     update(dt, worldSpeed, player, distance, onCollision, onNearMiss, onCoinCollect) {
-      // 1. Difficulty Scaling over distance traveled
       this.minSpawnInterval = Math.max(0.85, 1.35 - ((distance || 0) / 4500));
 
-      // 2. Obstacle Spawner with Fair Lane Enforcement
+      // 1. Vehicles
       this.spawnTimer += dt;
       if (this.spawnTimer >= this.currentInterval) {
         this._spawnObstacle(worldSpeed);
@@ -1143,30 +2241,51 @@ window.DesiRoadster = window.DesiRoadster || {};
         this.currentInterval = this.minSpawnInterval + Math.random() * 1.0;
       }
 
-      // 3. Coin Spawner
+      // 2. Potholes
+      this.potholeSpawnTimer += dt;
+      if (this.potholeSpawnTimer >= this.potholeInterval) {
+        this._spawnPothole();
+        this.potholeSpawnTimer = 0;
+        this.potholeInterval = 3.5 + Math.random() * 2.5;
+      }
+
+      // 3. Coins
       this.coinSpawnTimer += dt;
       if (this.coinSpawnTimer >= 2.0) {
         this._spawnCoins(player);
         this.coinSpawnTimer = 0;
       }
 
-      // 4. Update Obstacles, Collisions, and Near-Miss Detection
+      // 4. Update Obstacles with AI
       for (let i = this.obstacles.length - 1; i >= 0; i--) {
         const obs = this.obstacles[i];
-        obs.update(dt, worldSpeed);
+        obs.update(dt, worldSpeed, this.obstacles, this.lanes);
 
         if (player) {
           this._checkPlayerCollision(player, obs, onCollision);
           this._checkNearMiss(player, obs, onNearMiss);
         }
 
-        // Memory-safe culling when left edge is passed
         if (obs.isOffscreen()) {
           this.obstacles.splice(i, 1);
         }
       }
 
-      // 5. Update Coins & Collection Check
+      // 5. Update Potholes
+      for (let i = this.potholes.length - 1; i >= 0; i--) {
+        const p = this.potholes[i];
+        p.update(dt, worldSpeed);
+
+        if (player && !p.hasTriggered && p.checkCollision(player)) {
+          this._handlePotholeCollision(player, p, onCollision);
+        }
+
+        if (p.isOffscreen()) {
+          this.potholes.splice(i, 1);
+        }
+      }
+
+      // 6. Update Coins
       for (let i = this.coins.length - 1; i >= 0; i--) {
         const coin = this.coins[i];
         coin.update(dt, worldSpeed);
@@ -1177,12 +2296,10 @@ window.DesiRoadster = window.DesiRoadster || {};
           const pCenterY = pHitbox.y + pHitbox.height * 0.5;
           const dist = Math.hypot(pCenterX - coin.x, pCenterY - coin.y);
 
-          // Collection radius
           if (dist < (coin.radius + Math.min(pHitbox.width, pHitbox.height) * 0.55)) {
             coin.collected = true;
             this.coins.splice(i, 1);
 
-            // Spawn golden sparkle particles
             for (let sp = 0; sp < 8; sp++) {
               this.impactParticles.push({
                 x: coin.x,
@@ -1196,7 +2313,6 @@ window.DesiRoadster = window.DesiRoadster || {};
               });
             }
 
-            // Floating text
             this.floatingTexts.push({
               text: '+50 ₹',
               x: coin.x,
@@ -1217,8 +2333,211 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       }
 
-      // 6. Update Impact Particles & Floating Feedback Texts
+      // 7. Aerial Hazards
+      this.aerialSpawnTimer += dt;
+      if (this.aerialSpawnTimer >= this.aerialInterval) {
+        this._spawnAerialHazard(worldSpeed, player);
+        this.aerialSpawnTimer = 0;
+        this.aerialInterval = (Config.AERIAL_HAZARD_MIN_INTERVAL || 6.5) + Math.random() * 3.0;
+      }
+
+      for (let i = this.aerialHazards.length - 1; i >= 0; i--) {
+        const hazard = this.aerialHazards[i];
+        hazard.update(dt, worldSpeed);
+
+        if (player) {
+          if (!hazard.hasCollided && hazard.checkCollision(player)) {
+            this._handleAerialCollision(player, hazard, onCollision);
+          } else if (!hazard.hasNearMissed && !hazard.hasCollided && hazard.checkNearMiss(player)) {
+            this._handleAerialNearMiss(player, hazard, onNearMiss);
+          }
+        }
+
+        if (hazard.isOffscreen()) {
+          this.aerialHazards.splice(i, 1);
+        }
+      }
+
       this._updateEffects(dt);
+    }
+
+    _handlePotholeCollision(player, pothole, onCollision) {
+      pothole.hasTriggered = true;
+      pothole.hasCollided = true;
+
+      const upgradeManager = window.DesiRoadsterGameInstance && window.DesiRoadsterGameInstance.upgrades;
+      if (upgradeManager && upgradeManager.consumePotholeShield()) {
+        const audio = window.DesiRoadsterGameInstance && window.DesiRoadsterGameInstance.audio;
+        if (audio && audio.playZap) audio.playZap();
+        this.floatingTexts.push({
+          text: '🛡️ POTHOLE SHIELD SAVED YOU!',
+          x: player.x + 40,
+          y: player.y - 20,
+          vy: -35,
+          color: '#38BDF8',
+          life: 0.9,
+          maxLife: 0.9
+        });
+        return;
+      }
+
+      const isLarge = pothole.potholeType === 'large';
+      const suspensionDamp = (player.suspensionDamping || 1.0);
+      const audio = window.DesiRoadsterGameInstance && window.DesiRoadsterGameInstance.audio;
+      if (audio && audio.playPotholeThud) {
+        audio.playPotholeThud();
+      }
+
+      for (let i = 0; i < (isLarge ? 12 : 6); i++) {
+        this.impactParticles.push({
+          x: player.x + 30,
+          y: pothole.y + 10,
+          vx: (Math.random() - 0.5) * 160,
+          vy: -Math.random() * 120,
+          color: '#CBD5E1',
+          size: 2.5 + Math.random() * 2.5,
+          life: 0.35,
+          maxLife: 0.35
+        });
+      }
+
+      if (isLarge) {
+        const currentSpeed = (window.DesiRoadsterGameInstance && window.DesiRoadsterGameInstance.currentSpeed) || 300;
+        if (currentSpeed > 320 && player.launchFromPothole) {
+          player.launchFromPothole(-420 * suspensionDamp);
+          if (window.DesiRoadsterGameInstance) {
+            window.DesiRoadsterGameInstance.screenShake = 12;
+          }
+          this.floatingTexts.push({
+            text: '🚀 POTHOLE LAUNCH!',
+            x: player.x + 40,
+            y: player.y - 25,
+            vy: -40,
+            color: '#F59E0B',
+            life: 0.9,
+            maxLife: 0.9
+          });
+        } else {
+          if (window.DesiRoadsterGameInstance) {
+            window.DesiRoadsterGameInstance.screenShake = 8;
+            window.DesiRoadsterGameInstance.currentSpeed = Math.max(Config.MIN_SPEED, window.DesiRoadsterGameInstance.currentSpeed - 60);
+          }
+          this.floatingTexts.push({
+            text: '💥 DEEP CRATER JOLT!',
+            x: player.x + 40,
+            y: player.y - 20,
+            vy: -35,
+            color: '#EF4444',
+            life: 0.85,
+            maxLife: 0.85
+          });
+        }
+      } else {
+        if (window.DesiRoadsterGameInstance) {
+          window.DesiRoadsterGameInstance.screenShake = 5;
+          window.DesiRoadsterGameInstance.currentSpeed = Math.max(Config.MIN_SPEED, window.DesiRoadsterGameInstance.currentSpeed - 40 * suspensionDamp);
+        }
+        this.floatingTexts.push({
+          text: '💥 SUSPENSION JOLT!',
+          x: player.x + 40,
+          y: player.y - 20,
+          vy: -35,
+          color: '#E2E8F0',
+          life: 0.75,
+          maxLife: 0.75
+        });
+      }
+
+      if (onCollision) {
+        onCollision(pothole);
+      }
+    }
+
+    _handleAerialCollision(player, hazard, onCollision) {
+      hazard.hasCollided = true;
+      hazard.hasNearMissed = true;
+
+      const isWire = hazard.type === 'aerial_wires';
+      const isFlyover = hazard.type === 'flyover';
+      const contactX = player.x + player.width * 0.7;
+      const contactY = player.y + player.height * 0.5;
+
+      const sparkColor = isWire ? '#00F3FF' : (isFlyover ? '#CBD5E1' : '#FF9933');
+      for (let i = 0; i < 14; i++) {
+        this.impactParticles.push({
+          x: contactX,
+          y: contactY,
+          vx: (Math.random() - 0.5) * 200,
+          vy: (Math.random() - 0.5) * 160,
+          color: Math.random() > 0.4 ? sparkColor : '#FFFFFF',
+          size: 2.5 + Math.random() * 2.5,
+          life: 0.35,
+          maxLife: 0.35
+        });
+      }
+
+      let alertMsg = isWire ? '⚡ LIVE WIRE JOLT!' : '🪁 MANJA SNAG!';
+      let alertColor = isWire ? '#00F3FF' : '#FF0055';
+      if (isFlyover) {
+        alertMsg = '🌉 FLYOVER IMPACT!';
+        alertColor = '#EF4444';
+      }
+
+      this.floatingTexts.push({
+        text: alertMsg,
+        x: contactX,
+        y: Math.max(75, contactY - 22),
+        vy: -35,
+        color: alertColor,
+        life: 0.85,
+        maxLife: 0.85
+      });
+
+      if (player.battery !== undefined) {
+        player.battery = Math.max(0, player.battery - (isWire ? 10 : (isFlyover ? 15 : 8)));
+      }
+
+      if (onCollision) {
+        onCollision(hazard);
+      }
+    }
+
+    _handleAerialNearMiss(player, hazard, onNearMiss) {
+      hazard.hasNearMissed = true;
+
+      const isWire = hazard.type === 'aerial_wires';
+      const isFlyover = hazard.type === 'flyover';
+      let text = isWire ? '⚡ WIRE SKIM! +100' : '🪁 KITE EVADED! +100';
+      if (isFlyover) text = '🌉 BRIDGE CLEARANCE! +100';
+      const notifyX = Math.max(90, Math.min(Config.CANVAS_WIDTH - 120, player.x + player.width * 0.5));
+      const notifyY = player.y < 125 ? (player.y + player.height + 22) : (player.y - 18);
+      const notifyVy = player.y < 125 ? 18 : -32;
+
+      this.floatingTexts.push({
+        text: text,
+        x: notifyX,
+        y: notifyY,
+        vy: notifyVy,
+        color: isWire ? '#00F3FF' : (isFlyover ? '#38BDF8' : '#FF9933'),
+        isNearMiss: true,
+        life: 0.9,
+        maxLife: 0.9
+      });
+
+      for (let i = 0; i < 5; i++) {
+        this.impactParticles.push({
+          x: player.x + player.width * 0.5,
+          y: player.y + player.height * 0.5,
+          vx: (Math.random() - 0.5) * 120,
+          vy: (Math.random() - 0.5) * 80,
+          color: isWire ? '#00F3FF' : '#FFD700',
+          size: 2 + Math.random() * 2,
+          life: 0.25,
+          maxLife: 0.25
+        });
+      }
+
+      if (onNearMiss) onNearMiss(hazard);
     }
 
     _checkNearMiss(player, obs, onNearMiss) {
@@ -1228,7 +2547,6 @@ window.DesiRoadster = window.DesiRoadster || {};
       const pHitbox = player.getHitbox ? player.getHitbox() : { x: player.x, y: player.y, width: player.width, height: player.height };
       const oHitbox = obs.getHitbox();
 
-      // 1. Ineligible if currently intersecting bounding boxes (overlapping = collision zone)
       const isOverlapping = (
         pHitbox.x < oHitbox.x + oHitbox.width &&
         pHitbox.x + pHitbox.width > oHitbox.x &&
@@ -1237,32 +2555,19 @@ window.DesiRoadster = window.DesiRoadster || {};
       );
       if (isOverlapping) return;
 
-      // 2. Horizontal Pass Evaluation:
-      // Obstacles travel right-to-left. The near-miss triggers precisely once
-      // as the obstacle midpoint clears the player car's rear, within a bounded catch window.
       const isPastRear = pHitbox.x > (oHitbox.x + oHitbox.width * 0.45);
       const isWithinCatchWindow = pHitbox.x < (oHitbox.x + oHitbox.width + 65);
-
       if (!isPastRear || !isWithinCatchWindow) return;
 
-      // 3. Proximity / Close-Call Threshold (Deterministic center Y distance)
       const playerCenterY = pHitbox.y + pHitbox.height * 0.5;
       const obsCenterY = oHitbox.y + oHitbox.height * 0.5;
       const vertDist = Math.abs(playerCenterY - obsCenterY);
 
-      // Criteria:
-      // - Adjacent road lane pass: vertDist ~55px (lane 1-2) or ~60px (lane 0-1)
-      // - Narrow jump-over clearance: vertDist ~38-70px
-      // - Low-altitude flight skim clearance: vertDist ~38-70px
-      // - Two lanes away: vertDist = 115px (REJECTED: safe distance)
-      // - High-altitude flight: vertDist > 90px (REJECTED: safe cruising altitude)
-      // - Direct overlap without clearance: vertDist < 22px (REJECTED: collision)
       const isCloseCall = vertDist >= 22 && vertDist <= 74;
 
       if (isCloseCall) {
         obs.hasNearMissed = true;
 
-        // Position notification safely clear of top HUD bar (Y: 0-65)
         const notifyX = Math.max(90, Math.min(Config.CANVAS_WIDTH - 120, player.x + player.width * 0.5));
         const notifyY = player.y < 125 ? (player.y + player.height + 22) : (player.y - 18);
         const notifyVy = player.y < 125 ? 18 : -32;
@@ -1278,7 +2583,6 @@ window.DesiRoadster = window.DesiRoadster || {};
           maxLife: 0.9
         });
 
-        // Close-shave electric spark particles between the player and obstacle
         const sparkX = (pHitbox.x + oHitbox.x + oHitbox.width) * 0.5;
         const sparkY = (playerCenterY + obsCenterY) * 0.5;
         for (let i = 0; i < 5; i++) {
@@ -1299,19 +2603,14 @@ window.DesiRoadster = window.DesiRoadster || {};
     }
 
     _checkPlayerCollision(player, obs, onCollision) {
-      // 1. FLIGHT MODE AVOIDANCE:
-      // If player is flying high above the road, they glide effortlessly OVER all traffic!
       if (player.mode === 'FLIGHT' && (player.y + player.height - 12) < obs.y) {
         return;
       }
 
-      // 2. ROAD MODE JUMP AVOIDANCE:
-      // If player jumped and car bottom cleared obstacle top
       if (!player.isGrounded && (player.y + player.height) < (obs.y + 12)) {
         return;
       }
 
-      // 3. AABB Collision Box intersection
       const pHitbox = player.getHitbox ? player.getHitbox() : {
         x: player.x + 8,
         y: player.y + 6,
@@ -1334,9 +2633,8 @@ window.DesiRoadster = window.DesiRoadster || {};
 
     _handleCollision(player, obs, onCollision) {
       obs.hasCollided = true;
-      obs.hasNearMissed = true; // Ineligible for near-miss if collided
+      obs.hasNearMissed = true;
 
-      // Spawn collision spark particles
       const contactX = (player.x + player.width + obs.x) / 2;
       const contactY = (player.y + obs.y + obs.height) / 2;
 
@@ -1353,13 +2651,13 @@ window.DesiRoadster = window.DesiRoadster || {};
         });
       }
 
-      // Funny Desi collision alerts
       let alertMsg = 'BUMP!';
       if (obs.type === 'cow') alertMsg = 'HOLY COW! 🐄';
       else if (obs.type === 'buffalo') alertMsg = 'BUFFALO BLOCK! 🐃';
       else if (obs.type === 'auto') alertMsg = 'AUTO SCRAPE! 🛺';
       else if (obs.type === 'scooter') alertMsg = 'SCOOTER SWERVE! 🛵';
       else if (obs.type === 'car') alertMsg = 'TAXI TAP! 🚕';
+      else if (obs.type === 'truck') alertMsg = 'HORN OK PLEASE! 🚛';
 
       this.floatingTexts.push({
         text: alertMsg,
@@ -1377,7 +2675,6 @@ window.DesiRoadster = window.DesiRoadster || {};
     }
 
     _updateEffects(dt) {
-      // Particles
       for (let i = this.impactParticles.length - 1; i >= 0; i--) {
         const p = this.impactParticles[i];
         p.life -= dt;
@@ -1389,7 +2686,6 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       }
 
-      // Floating texts
       for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
         const t = this.floatingTexts[i];
         t.life -= dt;
@@ -1398,34 +2694,41 @@ window.DesiRoadster = window.DesiRoadster || {};
         } else {
           t.y += t.vy * dt;
           if (t.isNearMiss && t.y < 75) {
-            t.y = 75; // Strict barrier: never enter HUD zone (Y: 0-65)
+            t.y = 75;
           }
         }
       }
     }
 
     render(ctx) {
-      // 1. Draw Collectible Coins
+      // 1. Draw Potholes (On road surface beneath traffic)
+      for (const p of this.potholes) {
+        p.render(ctx);
+      }
+
+      // 2. Draw Collectible Coins
       for (const coin of this.coins) {
         coin.render(ctx);
       }
 
-      // 2. Sort obstacles by Y (lane order) so closer obstacles render in front
+      // 3. Sort obstacles by Y (lane order) so closer obstacles render in front
       const sorted = [...this.obstacles].sort((a, b) => a.y - b.y);
-
-      // 3. Draw Obstacles
       for (const obs of sorted) {
         obs.render(ctx);
       }
 
-      // 4. Draw Impact Sparks & Floating Texts
+      // 4. Draw Aerial Hazards (Overhead Wires, Kite Strings, Low Flyovers)
+      for (const hazard of this.aerialHazards) {
+        hazard.render(ctx);
+      }
+
+      // 5. Draw Impact Sparks & Floating Texts
       this._renderEffects(ctx);
     }
 
     _renderEffects(ctx) {
       ctx.save();
 
-      // Sparks
       for (const p of this.impactParticles) {
         ctx.fillStyle = p.color;
         ctx.globalAlpha = Math.max(0, p.life / p.maxLife);
@@ -1434,7 +2737,6 @@ window.DesiRoadster = window.DesiRoadster || {};
         ctx.fill();
       }
 
-      // Floating Texts
       for (const t of this.floatingTexts) {
         const alpha = Math.max(0, t.life / t.maxLife);
         const progress = 1 - (t.life / t.maxLife);
@@ -1444,7 +2746,6 @@ window.DesiRoadster = window.DesiRoadster || {};
         ctx.translate(t.x, t.y);
 
         if (t.isNearMiss) {
-          // Punchy arcade scale pop: begins with a swift 1.25x bounce and settles to 1.0x
           const scale = progress < 0.25 ? (1.0 + (progress / 0.25) * 0.25) : Math.max(0.9, 1.25 - (progress - 0.25) * 0.35);
           ctx.scale(scale, scale);
           ctx.font = '900 15px Orbitron, sans-serif';
@@ -1455,12 +2756,10 @@ window.DesiRoadster = window.DesiRoadster || {};
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        // High-contrast dark contour outline ensures crisp readability against any background
         ctx.strokeStyle = '#050B14';
         ctx.lineWidth = 3;
         ctx.strokeText(t.text, 0, 0);
 
-        // Vibrant neon glow fill
         ctx.fillStyle = t.color;
         ctx.shadowColor = t.color;
         ctx.shadowBlur = t.isNearMiss ? 10 : 6;
@@ -1480,5 +2779,10 @@ window.DesiRoadster = window.DesiRoadster || {};
   window.DesiRoadster.TaxiCar = TaxiCar;
   window.DesiRoadster.DesiCow = DesiCow;
   window.DesiRoadster.DesiBuffalo = DesiBuffalo;
+  window.DesiRoadster.DesiTruck = DesiTruck;
+  window.DesiRoadster.PotholeObstacle = PotholeObstacle;
+  window.DesiRoadster.AerialWireHazard = AerialWireHazard;
+  window.DesiRoadster.KiteStringHazard = KiteStringHazard;
+  window.DesiRoadster.LowFlyoverHazard = LowFlyoverHazard;
   window.DesiRoadster.ObstacleManager = ObstacleManager;
 })();

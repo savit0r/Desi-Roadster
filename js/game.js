@@ -8,7 +8,7 @@
 window.DesiRoadster = window.DesiRoadster || {};
 
 (function() {
-  const { Config, InputHandler, ParallaxBackground, Player, ObstacleManager, SoundController } = window.DesiRoadster;
+  const { Config, InputHandler, ParallaxBackground, Player, ObstacleManager, SoundController, UpgradeManager, EventDirector, RecapManager } = window.DesiRoadster;
 
   // Game States
   const STATE = {
@@ -34,6 +34,16 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.obstacles = new ObstacleManager();
       this.audio = new SoundController();
 
+      // Expansion Subsystems
+      this.upgrades = new UpgradeManager();
+      this.recap = new RecapManager();
+      this.events = new EventDirector(this.obstacles);
+      this.isDailyChallengeMode = false;
+      this.hornCooldownTimer = 0;
+
+      // Global reference for audio & upgrade lookups
+      window.DesiRoadsterGameInstance = this;
+
       // State & Progression
       this.state = STATE.START;
       this.lastTime = 0;
@@ -41,7 +51,7 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.screenShake = 0;
 
       // Scoring & Stats
-      this.distance = 0; // In meters (strictly frozen when not in PLAYING state)
+      this.distance = 0;
       this.coinScore = 0;
       this.coinsCount = 0;
       this.nearMissScore = 0;
@@ -64,9 +74,20 @@ window.DesiRoadster = window.DesiRoadster || {};
         pauseToggleBtn: document.getElementById('pause-toggle-btn'),
         startScreen: document.getElementById('start-screen'),
         startBtn: document.getElementById('start-btn'),
+        dailyChallengeBtn: document.getElementById('daily-challenge-btn'),
+        dailyChallengeLabel: document.getElementById('daily-challenge-label'),
+        openShopBtn: document.getElementById('open-shop-btn'),
+        gameoverShopBtn: document.getElementById('gameover-shop-btn'),
+        closeShopBtn: document.getElementById('close-shop-btn'),
+        shopModal: document.getElementById('shop-modal'),
+        shopBankDisplay: document.getElementById('shop-bank-display'),
+        upgradesGrid: document.getElementById('upgrades-grid'),
         pauseScreen: document.getElementById('pause-screen'),
         resumeBtn: document.getElementById('resume-btn'),
         gameoverScreen: document.getElementById('gameover-screen'),
+        finalHeadline: document.getElementById('final-headline'),
+        downloadCardBtn: document.getElementById('download-card-btn'),
+        shareTextBtn: document.getElementById('share-text-btn'),
         restartBtn: document.getElementById('restart-btn'),
         touchControls: document.getElementById('touch-controls'),
         finalScore: document.getElementById('final-score'),
@@ -84,6 +105,28 @@ window.DesiRoadster = window.DesiRoadster || {};
       // Start Button
       if (this.ui.startBtn) {
         this.ui.startBtn.addEventListener('click', () => this.startGame());
+      }
+      // Daily Challenge Toggle
+      if (this.ui.dailyChallengeBtn) {
+        this.ui.dailyChallengeBtn.addEventListener('click', () => this.toggleDailyChallenge());
+      }
+      // Garage Shop Open/Close
+      if (this.ui.openShopBtn) {
+        this.ui.openShopBtn.addEventListener('click', () => this.openShop());
+      }
+      if (this.ui.gameoverShopBtn) {
+        this.ui.gameoverShopBtn.addEventListener('click', () => this.openShop());
+      }
+      if (this.ui.closeShopBtn) {
+        this.ui.closeShopBtn.addEventListener('click', () => this.closeShop());
+      }
+      // Result Card Download
+      if (this.ui.downloadCardBtn) {
+        this.ui.downloadCardBtn.addEventListener('click', () => this.downloadResultCard());
+      }
+      // Copy Share Challenge Text
+      if (this.ui.shareTextBtn) {
+        this.ui.shareTextBtn.addEventListener('click', () => this.copyShareText());
       }
       // Resume Button
       if (this.ui.resumeBtn) {
@@ -115,6 +158,117 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
     }
 
+    toggleDailyChallenge() {
+      this.isDailyChallengeMode = !this.isDailyChallengeMode;
+      if (this.ui.dailyChallengeBtn) {
+        this.ui.dailyChallengeBtn.classList.toggle('active', this.isDailyChallengeMode);
+      }
+      if (this.ui.dailyChallengeLabel) {
+        const seedInfo = RecapManager.getDailySeed();
+        this.ui.dailyChallengeLabel.textContent = this.isDailyChallengeMode ? `📅 DAILY CHALLENGE: ${seedInfo.dateString}` : 'HIGHWAY RUN: NORMAL';
+      }
+      this.audio.playClick();
+    }
+
+    openShop() {
+      this.audio.playClick();
+      if (this.state === STATE.PLAYING) {
+        this.togglePause();
+      }
+      if (this.ui.shopModal) {
+        this.ui.shopModal.classList.remove('hidden');
+        this.renderShopGrid();
+      }
+    }
+
+    closeShop() {
+      this.audio.playClick();
+      if (this.ui.shopModal) {
+        this.ui.shopModal.classList.add('hidden');
+      }
+    }
+
+    renderShopGrid() {
+      if (!this.ui.upgradesGrid) return;
+      if (this.ui.shopBankDisplay) {
+        this.ui.shopBankDisplay.textContent = `${this.upgrades.getBank()} ₹`;
+      }
+
+      this.ui.upgradesGrid.innerHTML = '';
+      const bank = this.upgrades.getBank();
+
+      Object.keys(Config.UPGRADES).forEach(key => {
+        const up = Config.UPGRADES[key];
+        const isOwned = this.upgrades.hasUpgrade(up.id);
+        const canAfford = bank >= up.cost;
+
+        const card = document.createElement('div');
+        card.className = `upgrade-card ${isOwned ? 'owned' : ''}`;
+
+        card.innerHTML = `
+          <div>
+            <div class="upgrade-header">
+              <span class="upgrade-title">${up.name}</span>
+              <span class="upgrade-cost">${isOwned ? 'OWNED' : `${up.cost} ₹`}</span>
+            </div>
+            <p class="upgrade-desc">${up.desc}</p>
+            <p class="tradeoff-tag">⚠️ Trade-off: ${up.tradeoff}</p>
+          </div>
+          <button class="upgrade-buy-btn" data-upgrade-id="${up.id}" ${isOwned || !canAfford ? 'disabled' : ''}>
+            ${isOwned ? 'INSTALLED ✓' : (canAfford ? `BUY RETROFIT (${up.cost} ₹)` : `NEED ${up.cost - bank} MORE ₹`)}
+          </button>
+        `;
+
+        const buyBtn = card.querySelector('.upgrade-buy-btn');
+        if (buyBtn && !isOwned && canAfford) {
+          buyBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this.buyUpgrade(up.id);
+          });
+        }
+
+        this.ui.upgradesGrid.appendChild(card);
+      });
+    }
+
+    buyUpgrade(id) {
+      const res = this.upgrades.buyUpgrade(id);
+      if (res.success) {
+        this.audio.playCoin();
+        this.renderShopGrid();
+        if (this.player && this.player.applyUpgrades) {
+          this.player.applyUpgrades(this.upgrades);
+        }
+      }
+    }
+
+    triggerHorn() {
+      if (this.hornCooldownTimer > 0) return;
+      const cooldown = this.upgrades.hasHorn() ? 0.65 : 1.25;
+      this.hornCooldownTimer = cooldown;
+      this.audio.playHorn();
+
+      this.obstacles.scareTrafficWithHorn(this.player);
+      this.events.onHornHonked(this.player);
+    }
+
+    downloadResultCard() {
+      this.audio.playClick();
+      this.recap.downloadResultCard();
+    }
+
+    copyShareText() {
+      this.audio.playClick();
+      this.recap.copyShareText();
+      if (this.ui.shareTextBtn) {
+        const prev = this.ui.shareTextBtn.innerHTML;
+        this.ui.shareTextBtn.innerHTML = '<span>✅</span> COPIED TO CLIPBOARD!';
+        setTimeout(() => {
+          if (this.ui.shareTextBtn) this.ui.shareTextBtn.innerHTML = prev;
+        }, 2200);
+      }
+    }
+
     startGame() {
       this.audio.playClick();
       this.state = STATE.PLAYING;
@@ -124,6 +278,8 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.nearMissScore = 0;
       this.nearMissCount = 0;
       this.scorePopTimer = 0;
+      this.hornCooldownTimer = 0;
+
       if (this.ui.scoreDisplay) {
         this.ui.scoreDisplay.style.color = '';
         this.ui.scoreDisplay.style.textShadow = '';
@@ -132,14 +288,22 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.currentSpeed = Config.BASE_SPEED;
       this.screenShake = 0;
 
+      // Reset and initialize subsystems
+      this.upgrades.initRun();
+      this.recap.resetRunStats();
+      this.recap.isDailyChallenge = this.isDailyChallengeMode;
+
       this.player = new Player();
+      this.player.applyUpgrades(this.upgrades);
       this.obstacles.reset();
+      this.events.reset();
       this.background.reset();
 
       // UI Overlays
       this.ui.startScreen.classList.add('hidden');
       this.ui.pauseScreen.classList.add('hidden');
       this.ui.gameoverScreen.classList.add('hidden');
+      if (this.ui.shopModal) this.ui.shopModal.classList.add('hidden');
       this.ui.hud.classList.remove('hidden');
       if (this.ui.touchControls) {
         this.ui.touchControls.classList.remove('hidden');
@@ -186,10 +350,18 @@ window.DesiRoadster = window.DesiRoadster || {};
         isNewRecord = true;
       }
 
+      // Bank earned coins permanently into player's wallet
+      this.upgrades.addCoins(this.coinsCount);
+
+      // Satirical headline
+      if (this.ui.finalHeadline) {
+        this.ui.finalHeadline.textContent = `"${this.recap.generateHeadline()}"`;
+      }
+
       // Populate Game Over Statistics
       this.ui.finalScore.textContent = isNewRecord ? `${totalScore} 🌟 (NEW HIGH SCORE!)` : `${totalScore}`;
       this.ui.finalDistance.textContent = `${Math.floor(this.distance)} m`;
-      this.ui.finalCoins.textContent = `${this.coinsCount} collected (+${this.coinScore} pts)`;
+      this.ui.finalCoins.textContent = `${this.coinsCount} ₹ (Banked!)`;
       this.ui.finalNearmisses.textContent = `${this.nearMissCount} (+${this.nearMissScore} pts)`;
       this.ui.finalHighscore.textContent = `${this.highScore}`;
 
@@ -199,13 +371,9 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
     }
 
-    /**
-     * Main engine loop using requestAnimationFrame
-     */
     run(timestamp = 0) {
       if (!this.lastTime) this.lastTime = timestamp;
 
-      // Delta Time in seconds, capped at 0.1s to prevent physics blowup on tab lag
       const dt = Math.min((timestamp - this.lastTime) / 1000, 0.1);
       this.lastTime = timestamp;
 
@@ -216,9 +384,6 @@ window.DesiRoadster = window.DesiRoadster || {};
       requestAnimationFrame((t) => this.run(t));
     }
 
-    /**
-     * Game logic update step
-     */
     update(dt) {
       // 1. Audio Mute hotkey (M)
       if (this.input.isJustPressed('mute')) {
@@ -240,7 +405,6 @@ window.DesiRoadster = window.DesiRoadster || {};
           this.restartGame();
           return;
         }
-        // Player cannot move after game over
         this.player.update(dt, { isDown: () => false, isJustPressed: () => false }, 0);
         return;
       }
@@ -253,33 +417,39 @@ window.DesiRoadster = window.DesiRoadster || {};
 
       if (this.state !== STATE.PLAYING) return;
 
-      // 4. Speed Throttling & Progressive Difficulty
-      // Base highway speed gradually increases over distance
+      // 4. Pressure Horn
+      if (this.hornCooldownTimer > 0) {
+        this.hornCooldownTimer -= dt;
+      }
+      if (this.input.isJustPressed('horn')) {
+        this.triggerHorn();
+      }
+
+      // 5. Speed Throttling & Progressive Difficulty
       const dynamicBaseSpeed = Config.BASE_SPEED + Math.min(180, Math.floor(this.distance / 120));
       let targetSpeed = dynamicBaseSpeed;
 
       if (this.input.isDown('right')) {
-        targetSpeed = dynamicBaseSpeed + 180; // Nitro boost
+        targetSpeed = dynamicBaseSpeed + 180;
       } else if (this.input.isDown('left')) {
-        targetSpeed = Math.max(Config.MIN_SPEED, dynamicBaseSpeed - 120); // Braking
+        targetSpeed = Math.max(Config.MIN_SPEED, dynamicBaseSpeed - 120);
       }
       this.currentSpeed += (targetSpeed - this.currentSpeed) * Math.min(dt * 3, 1);
 
-      // 5. Distance Score Increment (Strictly frozen when not PLAYING)
+      // 6. Distance Score Increment
       this.distance += (this.currentSpeed * 0.25) * dt;
 
-      // 6. Audio triggers for Jump
+      // 7. Audio triggers for Jump
       if (this.input.isJustPressed('jump') && this.player.isGrounded && this.player.mode === 'ROAD') {
         this.audio.playJump();
       }
 
-      // 7. Mode Transformation Toggle (F or Shift)
+      // 8. Mode Transformation Toggle (F or Shift)
       if (this.input.isJustPressed('toggleFlight')) {
         const toggleResult = this.player.toggleMode();
         if (toggleResult && toggleResult.success) {
           this.audio.playTransform(toggleResult.targetMode === 'FLIGHT');
         } else if (toggleResult && !toggleResult.success && toggleResult.reason === 'BATTERY_LOW') {
-          // Floating warning alert
           this.obstacles.floatingTexts.push({
             text: '⚡ BATTERY LOW! (>15% REQUIRED TO FLY)',
             x: this.player.x + 60,
@@ -292,7 +462,7 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       }
 
-      // 8. Update Subsystems
+      // 9. Update Subsystems
       this.background.update(dt, this.currentSpeed, this.player);
       this.player.update(dt, this.input, this.currentSpeed);
 
@@ -311,7 +481,36 @@ window.DesiRoadster = window.DesiRoadster || {};
         }
       }
 
-      // 9. Update Obstacles, Near-Misses, and Coins
+      // 10. Update Random Indian Road Events (Wedding Baraat, Sabzi Cart, Cricket Ball)
+      this.events.update(
+        dt,
+        this.currentSpeed,
+        this.player,
+        this.distance,
+        (eventObs) => {
+          this.recap.recordHazardHit(eventObs.type);
+          const hitResult = this.player.triggerHit();
+          if (hitResult.hit) {
+            this.audio.playCrash();
+            this.screenShake = 12;
+            this.currentSpeed = Math.max(Config.MIN_SPEED * 0.7, this.currentSpeed - 130);
+            this.player.battery = Math.max(0, this.player.battery - 8);
+
+            if (hitResult.isDead) {
+              this.triggerGameOver();
+            }
+          }
+        },
+        (eventObs) => {
+          this.nearMissCount++;
+          this.nearMissScore += 100;
+          this.audio.playNearMiss();
+          this.scorePopTimer = 0.35;
+        },
+        this.audio
+      );
+
+      // 11. Update Obstacles, Near-Misses, and Coins
       this.obstacles.update(
         dt,
         this.currentSpeed,
@@ -319,6 +518,7 @@ window.DesiRoadster = window.DesiRoadster || {};
         this.distance,
         // Collision Callback
         (obs) => {
+          this.recap.recordHazardHit(obs.type);
           const hitResult = this.player.triggerHit();
           if (hitResult.hit) {
             this.audio.playCrash();
@@ -326,7 +526,6 @@ window.DesiRoadster = window.DesiRoadster || {};
             this.currentSpeed = Math.max(Config.MIN_SPEED * 0.7, this.currentSpeed - 140);
             this.player.battery = Math.max(0, this.player.battery - 8);
 
-            // Check if player has run out of chassis integrity
             if (hitResult.isDead) {
               this.triggerGameOver();
             }
@@ -349,18 +548,19 @@ window.DesiRoadster = window.DesiRoadster || {};
         (coin) => {
           this.coinsCount++;
           this.coinScore += 50;
-          this.player.battery = Math.min(Config.BATTERY_MAX, this.player.battery + 4);
+          this.player.battery = Math.min(this.player.maxBattery || Config.BATTERY_MAX, this.player.battery + 4);
           this.audio.playCoin();
         }
       );
 
-      // 10. Sync HUD
+      // 12. Update Run Recap Statistics
+      const totalScore = Math.floor(this.distance) + this.coinScore + this.nearMissScore;
+      this.recap.updateStats(dt, this.currentSpeed, this.player, this.distance, totalScore, this.coinsCount, this.nearMissCount);
+
+      // 13. Sync HUD
       this._updateHUD();
     }
 
-    /**
-     * Synchronizes in-game HUD with current player state
-     */
     _updateHUD() {
       // 1. Total Arcade Score & Distance
       const totalScore = Math.floor(this.distance) + this.coinScore + this.nearMissScore;
@@ -405,7 +605,8 @@ window.DesiRoadster = window.DesiRoadster || {};
       }
 
       // 5. EV Battery / Flight Energy Core gauge
-      const batteryPct = Math.round(this.player.battery);
+      const maxB = this.player.maxBattery || Config.BATTERY_MAX;
+      const batteryPct = Math.round((this.player.battery / maxB) * 100);
       const batteryCard = document.querySelector('.battery-card');
 
       if (batteryPct <= 20) {
@@ -426,38 +627,38 @@ window.DesiRoadster = window.DesiRoadster || {};
       this.ui.batteryBar.style.width = `${batteryPct}%`;
     }
 
-    /**
-     * Render step: Canvas drawing pipeline
-     */
     render() {
-      // Clear canvas
       this.ctx.clearRect(0, 0, Config.CANVAS_WIDTH, Config.CANVAS_HEIGHT);
 
       this.ctx.save();
 
-      // Screen shake translation
       if (this.screenShake > 0) {
         const shakeX = (Math.random() - 0.5) * this.screenShake;
         const shakeY = (Math.random() - 0.5) * this.screenShake;
         this.ctx.translate(shakeX, shakeY);
       }
 
-      // 1. Parallax World (Sky, Skyline, Roadside, Road surface)
+      // 1. Parallax World
       this.background.render(this.ctx);
 
-      // 2. Obstacles, Coins & Effects
+      // 2. Obstacles, Potholes & Coins
       if (this.state !== STATE.START) {
         this.obstacles.render(this.ctx);
       }
 
-      // 3. Player Entity
+      // 3. Random Road Events (Wedding Baraat, Sabzi Cart, Cricket Ball)
+      if (this.state !== STATE.START) {
+        this.events.render(this.ctx);
+      }
+
+      // 4. Player Entity
       if (this.state !== STATE.START) {
         this.player.render(this.ctx);
       }
 
       this.ctx.restore();
 
-      // 4. Vignette / Arcade CRT overlay effect
+      // 5. Atmospheric Vignette
       this._renderAtmosphere();
     }
 

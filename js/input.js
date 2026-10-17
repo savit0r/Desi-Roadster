@@ -29,7 +29,8 @@ window.DesiRoadster = window.DesiRoadster || {};
         pause: ['KeyP', 'Escape'],
         start: ['Space', 'Enter'],
         restart: ['KeyR', 'Space', 'Enter'],
-        mute: ['KeyM']
+        mute: ['KeyM'],
+        horn: ['KeyH']
       };
 
       this._initKeyboardListeners();
